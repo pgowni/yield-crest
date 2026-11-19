@@ -1,0 +1,86 @@
+{
+  "replays": [
+    {
+      "Decision date": "2025-07-01",
+      "Lead horizon": 30,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.755,
+      "Observed share with enquiries": 0.833,
+      "Count interval coverage": 0.917,
+      "Brier": 0.1459
+    },
+    {
+      "Decision date": "2025-07-01",
+      "Lead horizon": 14,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.482,
+      "Observed share with enquiries": 0.417,
+      "Count interval coverage": 1.0,
+      "Brier": 0.2487
+    },
+    {
+      "Decision date": "2025-07-01",
+      "Lead horizon": 7,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.28,
+      "Observed share with enquiries": 0.167,
+      "Count interval coverage": 1.0,
+      "Brier": 0.1535
+    },
+    {
+      "Decision date": "2026-03-01",
+      "Lead horizon": 30,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.777,
+      "Observed share with enquiries": 0.917,
+      "Count interval coverage": 1.0,
+      "Brier": 0.0923
+    },
+    {
+      "Decision date": "2026-03-01",
+      "Lead horizon": 14,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.504,
+      "Observed share with enquiries": 0.833,
+      "Count interval coverage": 0.917,
+      "Brier": 0.2457
+    },
+    {
+      "Decision date": "2026-03-01",
+      "Lead horizon": 7,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.296,
+      "Observed share with enquiries": 0.583,
+      "Count interval coverage": 1.0,
+      "Brier": 0.3188
+    },
+    {
+      "Decision date": "2026-08-01",
+      "Lead horizon": 30,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.769,
+      "Observed share with enquiries": 0.917,
+      "Count interval coverage": 1.0,
+      "Brier": 0.1008
+    },
+    {
+      "Decision date": "2026-08-01",
+      "Lead horizon": 14,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.496,
+      "Observed share with enquiries": 0.583,
+      "Count interval coverage": 1.0,
+      "Brier": 0.2579
+    },
+    {
+      "Decision date": "2026-08-01",
+      "Lead horizon": 7,
+      "Faces": 12,
+      "Mean predicted any-enquiry chance": 0.29,
+      "Observed share with enquiries": 0.333,
+      "Count interval coverage": 0.917,
+      "Brier": 0.229
+    }
+  ],
+  "interpretation": "Synthetic enquiry-count replay only. Three decision dates; site observations share seasonal demand conditions. No counterfactual revenue claim."
+}

@@ -16,3 +16,8 @@ h1{letter-spacing:-.055em}h2,h3{letter-spacing:-.035em}
 [data-testid="stMetric"]{border-top:3px solid #528b80;box-shadow:0 2px 9px #223e4710}
 [data-testid="stButton"] button{border-radius:8px;font-weight:600}
 @media(max-width:600px){.yc-mast{padding:16px}.yc-context{font-size:11px}}
+[data-testid="stMetricValue"]{font-size:1.8rem}
+[data-testid="stMetricLabel"]{color:#536a70}
+[data-testid="stExpander"]{border-radius:12px;background:#fff;border:1px solid #d9e4e2}
+[data-testid="stTabs"] [data-baseweb="tab"]{font-size:14px}
+[data-testid="stAlert"]{border-radius:10px}

@@ -1,0 +1,17 @@
+{
+  "seed": 7319,
+  "history_start": "2024-01-01",
+  "as_of": "2026-11-19",
+  "normal_daily_enquiries_per_face": 0.045,
+  "festive_sales_enquiry_multiplier": 3.2,
+  "festive_daily_rate_multiplier": 1.8,
+  "weekly_shared_demand_range": [
+    0.75,
+    1.25
+  ],
+  "demo_reserve": "Faces 1\u20135 kept free from 19 November for review; operator-declined offers excluded from classifier",
+  "client_repeat_close_log_odds": 0.06,
+  "price_ratio_close_log_odds": -1.4,
+  "festive_period": "5\u201320 December, illustrative retail period; not official festival dates",
+  "assumptions": "All enquiries are logged, even when unavailable. Hypothetical operator behaviour generates bookings. Synthetic evidence only."
+}

@@ -1,0 +1,71 @@
+{
+  "as_of": "2026-11-19",
+  "close_selected_on_validation": "Shallow random forest",
+  "offer_metrics": [
+    {
+      "Stage": "Validation",
+      "Model": "Historical win rate",
+      "Train": 229,
+      "Test": 42,
+      "Brier": 0.23656971417311612
+    },
+    {
+      "Stage": "Validation",
+      "Model": "Logistic regression",
+      "Train": 229,
+      "Test": 42,
+      "Brier": 0.24228644250728643
+    },
+    {
+      "Stage": "Validation",
+      "Model": "Shallow random forest",
+      "Train": 229,
+      "Test": 42,
+      "Brier": 0.2347248694036789
+    },
+    {
+      "Stage": "Test",
+      "Model": "Historical win rate",
+      "Train": 329,
+      "Test": 53,
+      "Brier": 0.2500189566503677
+    },
+    {
+      "Stage": "Test",
+      "Model": "Logistic regression",
+      "Train": 329,
+      "Test": 53,
+      "Brier": 0.2645038548057986
+    },
+    {
+      "Stage": "Test",
+      "Model": "Shallow random forest",
+      "Train": 329,
+      "Test": 53,
+      "Brier": 0.25455478128839304
+    }
+  ],
+  "arrival_metrics": {
+    "train_face_days": 9480,
+    "test_face_days": 3156,
+    "poisson_deviance": 0.30989881020227295,
+    "baseline_deviance": 0.3160862859473736,
+    "brier": 0.05085828300714924
+  },
+  "features": [
+    "site",
+    "festive sales period",
+    "month sine/cosine",
+    "relative daily quote",
+    "duration",
+    "lead time",
+    "prior completed bookings"
+  ],
+  "limitations": [
+    "Synthetic replay demonstrates plumbing and point-in-time controls only.",
+    "Achieved prices are conditional on historical accepted bookings.",
+    "Only two completed illustrative festive periods exist.",
+    "Future buyer location is fixed to a single face.",
+    "Daily arrival and conversion assumptions originate in the published generator."
+  ]
+}
