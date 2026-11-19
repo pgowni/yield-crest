@@ -16,7 +16,7 @@
 - [x] Gemini tool calling, bounded recalculations, multi-turn interface and calculation trace.
 - [x] Chronology/leakage, calendar, financial and tool-protocol regression checks.
 - [x] Synthetic T−30/T−14/T−7 rolling enquiry-count replay.
-- [ ] Verify deployed controls against the committed model outputs.
+- [x] Verify deployed controls against the committed model outputs.
 - [ ] Live Gemini response and recalculation with an owner-provided key.
 
 ## Operating assumptions visible to the reviewer
@@ -44,3 +44,10 @@
 Inspect record completeness and invoice linkage. Refit with time splits and compare
 against baselines. Count distinct genuinely available episodes and seasonal periods.
 Counterfactual revenue from declined offers remains unobserved.
+
+## Verified hosted examples
+
+A ₹12,000 gross Prakash offer on Ameerpet has a negative advantage on the original
+dates and a positive advantage when moved five days earlier. The joint service
+planner chooses December 10–11 to preserve current campaigns. Enquiry navigation,
+cash timing and the Evidence view were checked on the deployed app.

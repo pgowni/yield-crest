@@ -44,7 +44,7 @@ def generate():
     CREATE TABLE receipts(id INTEGER PRIMARY KEY,invoice_id INTEGER REFERENCES invoices,paid TEXT,amount REAL);
     CREATE TABLE live_requests(id INTEGER PRIMARY KEY,client_id INTEGER REFERENCES clients,label TEXT,start_date TEXT,
       end_date TEXT,gross REAL,share REAL,commission REAL,absorbed REAL,illuminated INTEGER,
-      quantity INTEGER,min_duration INTEGER,expires TEXT,kind TEXT);
+      quantity INTEGER,min_duration INTEGER,expires TEXT,kind TEXT,enquiry_id INTEGER UNIQUE REFERENCES enquiries);
     CREATE TABLE request_faces(request_id INTEGER REFERENCES live_requests,face_id INTEGER REFERENCES faces,
       basis TEXT,PRIMARY KEY(request_id,face_id));
     CREATE TABLE maintenance_jobs(id INTEGER PRIMARY KEY,face_id INTEGER REFERENCES faces,task TEXT,
@@ -134,8 +134,12 @@ def generate():
         (1,"Prakash · flexible retail campaign","2026-11-25","2026-12-09",65000,"Agency"),
         (2,"Lotus · local storefront","2026-11-25","2026-12-09",43000,"Direct"),
         (3,"Vista · renewal request","2026-11-25","2026-12-09",46000,"Renewal")],1):
-        db.execute("INSERT INTO live_requests VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                   (i,client,label,start,end,gross,.8 if client==1 else 1,0,900,1,1,7,"2026-11-24",kind))
+        eid=db.execute("INSERT INTO enquiries(client_id,face_id,received,requested_start,requested_end,status,record_source) VALUES(?,?,?,?,?,?,?)",
+                       (client,selected[0] if i==1 else selected[i-2],AS_OF.isoformat(),start,end,"Open","live_demo")).lastrowid
+        db.execute("INSERT INTO offers VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                   (eid,eid,AS_OF.isoformat(),"2026-11-24",gross,.8 if client==1 else 1,0,900,1,1,"Open"))
+        db.execute("INSERT INTO live_requests VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                   (i,client,label,start,end,gross,.8 if client==1 else 1,0,900,1,1,7,"2026-11-24",kind,eid))
         eligible=selected if i==1 else [selected[i-2]]
         for face in eligible:
             db.execute("INSERT INTO request_faces VALUES(?,?,?)",(i,face,"Client-confirmed for this synthetic request"))
