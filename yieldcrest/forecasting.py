@@ -13,9 +13,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression, PoissonRegressor, Ridge
 from sklearn.ensemble import RandomForestClassifier
 
-from domain import AS_OF, dates, days, overlaps
+from yieldcrest.domain import AS_OF, ROOT, dates, days, overlaps
 
-ARTIFACT = Path(__file__).with_name("models") / "forecast.joblib"
+ARTIFACT = ROOT / "artifacts" / "forecast.joblib"
 
 
 def season(db, start, end):
@@ -158,3 +158,4 @@ def sample_paths(db, face, end_date, count=96, seed=7319):
                 paths[index].append(event)
     return paths, {"local_bookings":len(local),"pooled_bookings":len(templates),
                    "local_weight":round(local_weight,3),"seasonal_periods":len({str(r[0])[:4] for r in db.execute("SELECT start_date FROM seasonal_periods WHERE end_date<?",(AS_OF.isoformat(),))})}
+

@@ -5,7 +5,7 @@ import re
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
-from decision_engine import compare_calendar, joint_allocation, maintenance_options
+from yieldcrest.decision_engine import compare_calendar, joint_allocation, maintenance_options
 
 BASE="https://generativelanguage.googleapis.com/v1beta"
 TOOLS=[
@@ -144,3 +144,4 @@ def respond(key,question,history,context,configured_model=""):
             responses.append({"functionResponse":part})
         contents.append({"role":"user","parts":responses})
     raise RuntimeError("The assistant requested too many recalculations. Try one scenario change at a time.")
+

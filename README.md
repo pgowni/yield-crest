@@ -1,69 +1,103 @@
 # YieldCrest
 
-Synthetic AdPlay booking decision demonstration. Fixed snapshot 19 November 2026.
-Run `pip install -r requirements.txt`, then `streamlit run streamlit_app.py`.
+An AdPlay booking decision prototype using synthetic Hyderabad outdoor-media data.
+The demonstration is fixed at 19 November 2026 and plans through 31 December.
 
-The committed `yieldcrest.sqlite` contains the full dataset. The running app opens
-it read-only. It never seeds data or trains models on a user interaction.
-Each browser session owns its scenario controls and conversation.
+## Repository layout
 
-## Review
+| Folder | Contents |
+|---|---|
+| [yieldcrest](yieldcrest) | Calendar/finance domain logic, forecasting, booking decisions and Gemini tools |
+| [yieldcrest/ui](yieldcrest/ui) | Dashboard pages, shared components, floating chat and styles |
+| [data](data) | Persistent SQLite database and generator assumptions |
+| [data/splits](data/splits) | Exact training, validation, test, final-fit and replay CSV snapshots |
+| [artifacts](artifacts) | Fitted model artifact loaded by the app |
+| [reports](reports) | Model comparison metrics and chronological replay results |
+| [scripts](scripts) | Explicit offline generation, export and training commands |
+| [tests](tests) | Financial, calendar, leakage and tool-protocol regression checks |
+| [docs](docs) | Implementation checklist |
+| [archive/legacy](archive/legacy) | Earlier two-board demo files preserved for reference |
 
-- **Decisions / Accept or preserve dates** compares identical future demand across two calendars.
-  The current offer is firm. Gross break-even includes share, costs and the selected lighting policy.
-- **Allocate competing requests** evaluates every feasible current assignment and all close/fail
-  combinations for up to three independent uncertain requests. A skipped request is explicitly declined.
-  Holds that fail release their actual dates to subsequent enquiries. Requests must meet their full duration.
-- **Operations** compares service windows by expected rental contribution displaced and blocks selected
-  windows during joint allocation.
-- **Evidence** shows chronological splits, baselines, limits and generator parameters.
-- The LLM can inspect figures and call bounded calculation functions. It cannot write to the database.
+The root [streamlit_app.py](streamlit_app.py) remains the deployment entrypoint.
+[requirements.txt](requirements.txt) and .streamlit/config.toml remain in the root
+so the existing Streamlit deployment continues to find them.
+
+## Run the app
+
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+The app opens [data/yieldcrest.sqlite](data/yieldcrest.sqlite) read-only and loads
+[artifacts/forecast.joblib](artifacts/forecast.joblib). User interactions neither
+regenerate data nor retrain models. Each browser session owns its what-if controls,
+connection settings and conversation.
+
+## Reproduce the models
+
+```bash
+python -m scripts.export_datasets
+python -m scripts.train_models
+python -m tests.validate
+```
+
+The exporter writes checksummed feature snapshots. Training reads those same CSVs,
+uses chronological validation to select the offer-close classifier, evaluates later
+quotes, and then refits on the final-fit snapshots. Exported rows reproduce the
+previous evaluation metrics. See [the dataset guide](data/splits/README.md).
+
+The achieved-rate adjustment was fitted on accepted deals without a held-out test.
+Its training file is supplied and that evaluation gap is explicit. The offer
+classifier underperformed the historical win-rate baseline on its final test period.
+
+The one-time generator is `python -m scripts.generate_data`. It refuses to overwrite
+an existing database. Regeneration is an intentional offline action.
+Only load the trusted fitted artifact committed to this repository.
 
 ## Gemini connection
 
-In Streamlit's app settings add a server secret:
+Add a server secret in Streamlit app settings:
 
 ```toml
 GEMINI_API_KEY = "your key"
-# Optional. Without this setting the app discovers a text model available to the key.
-# GEMINI_MODEL = "your supported model ID"
+# Optional explicit supported model ID
+# GEMINI_MODEL = "your model ID"
 ```
 
-Keep keys out of GitHub. A personal session-only key can also be entered in Assistant connection.
-No vendor API is called until a question is submitted. Synthetic scenario details and the recent
-conversation are sent to Gemini at that point. Financial arithmetic stays in Python.
+Keep keys out of GitHub. A personal session-only key can be entered in the floating
+assistant's connection panel. Scenario details and recent conversation are sent to
+Gemini only when a question is submitted. The assistant invokes bounded Python
+functions for calculations and cannot modify the database.
 
-## Offline data and model work
+## Reviewer workflow
 
-`generate_data.py` is an explicit one-time generator and refuses to overwrite an existing database.
-Generator assumptions are in `data/generator_parameters.json`. The illustrative festive period is
-December 5–20, not an official holiday calendar. An 80% Prakash share and ₹5,000 tolerance are demo inputs.
-
-`train_models.py` fits and stores the enquiry-count, offer-close and achieved-rate models in
-`models/forecast.joblib`. `validate.py` runs chronology, calendar, cost and leakage regression checks.
-Regeneration is intentionally manual. Models load only trusted artifacts from this repository.
+- **Overview** shows current inventory, prorated November booked gross rent,
+  additional forecast net contribution, and overdue invoices.
+- **Enquiries** checks confirmed location alternatives and opens the selected request.
+- **Decisions** compares accepting a firm offer with preserving its dates, then evaluates
+  up to three independent uncertain offers across feasible whole-campaign allocations.
+- **Operations** compares service windows and jointly chooses maintenance dates and bookings.
+- **Evidence** shows model splits, baseline comparisons, replay and generator assumptions.
+- **Ask YieldCrest** floats across the workspaces and preserves conversation through navigation.
 
 ## Interpretation
 
-The offer classifier is experimental and did not beat the win-rate baseline on the final synthetic
-test period. The count model includes zero-arrival face-days. Joint lead-duration/rate templates
-come from accepted deals and therefore reflect historical operator selection. Local price samples
-are blended with portfolio samples. P10–P90 shows simulated outcome spread, not parameter uncertainty.
-Raw local and pooled sample counts and completed seasonal periods are displayed.
+The generator's festive period is December 5–20, an illustrative retail period.
+The 80% Prakash share and ₹5,000 priority tolerance are editable demo assumptions.
+Faces 1–5 are reserved in the generator for review scenarios; operator-declined
+offers are excluded from offer-close training.
 
-Future enquiries target one face. Future booking decisions follow an online, positive-contribution,
-first-feasible rule. The simulation never chooses future bookings with knowledge of later arrivals.
-The current-plan search is exhaustive for three requests; it is not a guarantee of globally optimal
-revenue under every possible future selling policy.
+Every alternative sees identical future paths. Future requests target a single face,
+and future bookings follow an online first-feasible, positive-contribution policy.
+Current-plan search is exhaustive for three requests. A skipped request is explicitly
+declined; a failed hold releases its face to subsequent demand after expiry.
+Close outcomes are assumed independent. A longer hold keeps the displayed close
+chance fixed until an operator changes it.
 
-Historical real-data testing is needed before relying on prices or claiming revenue uplift.
-Pending invoices are displayed separately from settled payment-time samples. Receipt forecasts are
-conditional on those timing samples and on the no-default assumption, not a guarantee of collection.
+Accepted prices reflect historical selection and negotiation. Local rate-duration
+samples are pooled with portfolio observations. P10–P90 describes simulated outcomes,
+not parameter uncertainty. Cash scenarios use settled invoice lags and assume no default.
 
-## Earlier fixtures
-
-The previous yieldcrest_step2.sqlite, yieldcrest_model.py, seed_database.py,
-seed_history.sql, train_close_model.py, portfolio.py and operations.py remain as
-legacy demo files. The active app uses domain.py, forecasting.py, decision_engine.py,
-yieldcrest.sqlite and the ui modules. The current dataset/model source is generate_data.py
-and train_models.py. Legacy scripts are independent of the current application.
+Synthetic replay demonstrates implementation and chronology. Real data is required
+to validate forecast accuracy and revenue uplift.

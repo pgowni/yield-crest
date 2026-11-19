@@ -6,8 +6,8 @@ import math
 
 import numpy as np
 
-from domain import AS_OF, HORIZON_END, connect, dates, days, overlaps, net_contribution
-from forecasting import sample_paths, close_probability
+from yieldcrest.domain import AS_OF, HORIZON_END, connect, dates, days, overlaps, net_contribution
+from yieldcrest.forecasting import sample_paths, close_probability
 
 SCENARIOS=64
 
@@ -298,3 +298,4 @@ def choose_service_allocation(job_id,hold_days=3,probabilities=None,partner_tole
         if best is None or net>best["net"]:
             best={"window":window,"result":result,"net":net,"blocks":blocks,"service_cost":options["job"]["service_cost"]}
     return best
+

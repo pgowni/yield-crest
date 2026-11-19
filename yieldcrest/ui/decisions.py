@@ -4,8 +4,8 @@ import json
 import pandas as pd
 import streamlit as st
 
-from domain import AS_OF, connect
-from decision_engine import compare_calendar, joint_allocation, live_requests, maintenance_options, choose_service_allocation
+from yieldcrest.domain import AS_OF, connect
+from yieldcrest.decision_engine import compare_calendar, joint_allocation, live_requests, maintenance_options, choose_service_allocation
 
 money=lambda value: f"₹{value:,.0f}"
 
@@ -84,7 +84,7 @@ def render():
         st.subheader("Choose commitments across the same calendar")
         st.caption("Three current requests, client-confirmed alternatives, independent close/fail outcomes. Every commitment is fixed before outcomes are revealed.")
         with connect() as db:
-            from forecasting import close_probability
+            from yieldcrest.forecasting import close_probability
             learned={str(r["id"]):close_probability(db,r,r["faces"][0]) for r in requests}
         cols=st.columns(len(requests))
         probabilities={}
@@ -135,3 +135,4 @@ def render():
             for item in joint["assumptions"]:
                 st.write("• "+item)
         st.session_state.latest_context=context
+

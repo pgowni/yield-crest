@@ -1,7 +1,7 @@
 import streamlit as st
 
-from domain import connect
-from ui.decisions import service_result,joint_result,money,integrated_service
+from yieldcrest.domain import connect
+from yieldcrest.ui.decisions import service_result,joint_result,money,integrated_service
 
 
 def render():
@@ -39,3 +39,4 @@ def render():
         st.metric("Expected net after service expense",money(comparison["recommended"]["expected"]-job["service_cost"]))
         st.dataframe([{"Client":r["client"],"Allocate":", ".join(r["sites"]) or "Decline"} for r in comparison["recommended"]["assignments"]],hide_index=True,use_container_width=True)
         st.caption("Scenario only. Choosing a window here does not confirm work or change stored bookings.")
+

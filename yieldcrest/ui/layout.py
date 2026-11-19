@@ -18,3 +18,4 @@ def occupancy(total, available):
     occupied = total - available
     percent = round(100 * occupied / total) if total else 0
     st.html(f'<section class="yc-summary"><b>Portfolio occupancy</b><div class="yc-track"><div class="yc-fill" style="width:{percent}%"></div></div><span class="yc-sub">{occupied} of {total} sites occupied · {percent}%</span></section>')
+

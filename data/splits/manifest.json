@@ -1,0 +1,203 @@
+{
+  "snapshot": "2026-11-19",
+  "source_database_sha256": "62569f55e8afe84468ce906413577eb2a3b053bcd960488c475ed9c80b2f802b",
+  "synthetic": true,
+  "notes": [
+    "IDs, dates and outcome metadata are exported for audit; only the listed feature columns enter the estimators.",
+    "Training labels must be known before a chronological cutoff.",
+    "Validation and final-test training windows intentionally overlap because training expands over time.",
+    "Final-fit snapshots include evaluated rows after scoring and are never used to report held-out performance.",
+    "Achieved-rate adjustment has training data only; no test score was previously calculated."
+  ],
+  "datasets": {
+    "offer_close/validation/train.csv": {
+      "rows": 229,
+      "features": [
+        "face",
+        "daily_rate_relative_to_site",
+        "duration_days",
+        "lead_days",
+        "festive_campaign",
+        "prior_completed_bookings"
+      ],
+      "target": "won",
+      "purpose": "Quotes and known outcomes before 2025-07-01",
+      "sha256": "a2c1f1c76ee525801e3de0da9df0321c48799d53569e7197ddae1af3e7363ab2"
+    },
+    "offer_close/validation/validation.csv": {
+      "rows": 42,
+      "features": [
+        "face",
+        "daily_rate_relative_to_site",
+        "duration_days",
+        "lead_days",
+        "festive_campaign",
+        "prior_completed_bookings"
+      ],
+      "target": "won",
+      "purpose": "Quotes from 2025-07-01 inclusive to 2025-11-01 exclusive",
+      "sha256": "88e7073636e63245598bd2fd8765b974b79ab4725e80a60a0db397a68904c841"
+    },
+    "offer_close/train.csv": {
+      "rows": 329,
+      "features": [
+        "face",
+        "daily_rate_relative_to_site",
+        "duration_days",
+        "lead_days",
+        "festive_campaign",
+        "prior_completed_bookings"
+      ],
+      "target": "won",
+      "purpose": "Quotes and known outcomes before 2026-03-01",
+      "sha256": "e323c89290384dc6f88a6f50922984018a7ae260754e0c8a4d6321c0b207fb47"
+    },
+    "offer_close/test.csv": {
+      "rows": 53,
+      "features": [
+        "face",
+        "daily_rate_relative_to_site",
+        "duration_days",
+        "lead_days",
+        "festive_campaign",
+        "prior_completed_bookings"
+      ],
+      "target": "won",
+      "purpose": "Quotes from 2026-03-01 inclusive to 2026-08-01 exclusive",
+      "sha256": "19fdd5f45272978a1dfb548692b10293f9ac8cd827bba64781752a28c990cb4e"
+    },
+    "offer_close/final_fit.csv": {
+      "rows": 426,
+      "features": [
+        "face",
+        "daily_rate_relative_to_site",
+        "duration_days",
+        "lead_days",
+        "festive_campaign",
+        "prior_completed_bookings"
+      ],
+      "target": "won",
+      "purpose": "Final deployed fit after evaluation; includes all eligible known outcomes before the snapshot",
+      "sha256": "791b8fbd2f66b09582ad544d682a0080691dff3bf02461d3673b50c08a04054e"
+    },
+    "demand/train.csv": {
+      "rows": 9480,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "Dates before 2026-03-01, including zero-count face-days",
+      "sha256": "87cbd0dca10b55c874041269ab3ec2ef33897b93e309ae6362a065b58160baca"
+    },
+    "demand/test.csv": {
+      "rows": 3156,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "Dates from 2026-03-01 through 2026-11-18",
+      "sha256": "18a1e73f7931a45dedf5b24abe68a5198b2881c1ddae7b9e88f7b5dfb450a76c"
+    },
+    "demand/final_fit.csv": {
+      "rows": 12636,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "Final deployed fit on all face-days before the snapshot",
+      "sha256": "0710a38abe7871c3951f26bb8f25f897e037d40b2fd9a69fc67f5e162dd220aa"
+    },
+    "demand/replay/2025-07-01/train.csv": {
+      "rows": 6564,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "Training input for T\u221230/T\u221214/T\u22127 replay",
+      "sha256": "5698a0e802eb12a9ba442eb6ac9197e9847d09df5699d300ae147d866947530d"
+    },
+    "demand/replay/2025-07-01/test.csv": {
+      "rows": 360,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "First 7, 14 or 30 days selected for the corresponding replay horizon",
+      "sha256": "c931de73a89fa6c4d1332eb4f3540d007cd6710144908d5c011c72110ddfd6a3"
+    },
+    "demand/replay/2026-03-01/train.csv": {
+      "rows": 9480,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "Training input for T\u221230/T\u221214/T\u22127 replay",
+      "sha256": "87cbd0dca10b55c874041269ab3ec2ef33897b93e309ae6362a065b58160baca"
+    },
+    "demand/replay/2026-03-01/test.csv": {
+      "rows": 360,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "First 7, 14 or 30 days selected for the corresponding replay horizon",
+      "sha256": "2c259ed4622a1b956b85f41aa0716993a4ab4b87a0d3249710816df5af63da0d"
+    },
+    "demand/replay/2026-08-01/train.csv": {
+      "rows": 11316,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "Training input for T\u221230/T\u221214/T\u22127 replay",
+      "sha256": "80b6027ee2a23748a11f7b641661dc39c49e676eb82c3e5cf5a68c4e852e3076"
+    },
+    "demand/replay/2026-08-01/test.csv": {
+      "rows": 360,
+      "features": [
+        "face",
+        "festive_sales_period",
+        "month_sin",
+        "month_cos"
+      ],
+      "target": "enquiry_count",
+      "purpose": "First 7, 14 or 30 days selected for the corresponding replay horizon",
+      "sha256": "15e4041f635aa499320be931d5dc4bcb9812b3d11fd7ecc6030da6cd168960a6"
+    },
+    "achieved_rate/train.csv": {
+      "rows": 267,
+      "features": [
+        "face",
+        "duration_days",
+        "festive_campaign"
+      ],
+      "target": "log_daily_rate",
+      "purpose": "All eligible accepted rates. This adjustment model previously had no held-out test; none is fabricated here.",
+      "sha256": "04358ca9edb302559425601efe91dd8f8dcd2d91daf7c4c698e2770ddad00043"
+    }
+  }
+}

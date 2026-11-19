@@ -5,7 +5,7 @@ import json
 import random
 import sqlite3
 
-from domain import AS_OF, DATABASE, dates, overlaps
+from yieldcrest.domain import AS_OF, DATABASE, ROOT, dates, overlaps
 
 PARAMETERS = {
     "seed": 7319, "history_start": "2024-01-01",
@@ -152,8 +152,8 @@ def generate():
     db.commit()
     assert not db.execute("PRAGMA foreign_key_check").fetchall()
     assert db.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
-    Path(__file__).with_name("data").mkdir(exist_ok=True)
-    Path(__file__).with_name("data").joinpath("generator_parameters.json").write_text(json.dumps(PARAMETERS,indent=2))
+    (ROOT / "data").mkdir(exist_ok=True)
+    (ROOT / "data").joinpath("generator_parameters.json").write_text(json.dumps(PARAMETERS,indent=2))
     for table in ["faces","clients","enquiries","offers","bookings","invoices","receipts"]:
         print(table,db.execute("SELECT count(*) FROM "+table).fetchone()[0])
     print("Planning faces", selected)
@@ -162,3 +162,4 @@ def generate():
 
 if __name__=="__main__":
     generate()
+

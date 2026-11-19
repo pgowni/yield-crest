@@ -51,3 +51,10 @@ A ₹12,000 gross Prakash offer on Ameerpet has a negative advantage on the orig
 dates and a positive advantage when moved five days earlier. The joint service
 planner chooses December 10–11 to preserve current campaigns. Enquiry navigation,
 cash timing and the Evidence view were checked on the deployed app.
+
+
+## Reproducible model inputs
+
+The exact feature rows are committed under data/splits. Offline training reads those
+CSVs directly. Runtime code lives in yieldcrest; scripts, tests, artifacts and reports
+have dedicated folders. Earlier fixtures are preserved under archive/legacy.

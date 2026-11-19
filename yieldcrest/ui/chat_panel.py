@@ -4,9 +4,9 @@ from pathlib import Path
 
 import streamlit as st
 
-from assistant_chat import respond
-from domain import AS_OF, connect
-from decision_engine import live_requests
+from yieldcrest.assistant_chat import respond
+from yieldcrest.domain import AS_OF, connect
+from yieldcrest.decision_engine import live_requests
 
 
 def set_open(value):
@@ -111,3 +111,4 @@ def render(section):
                 st.rerun()
             except (RuntimeError, ValueError) as error:
                 st.error(str(error))
+

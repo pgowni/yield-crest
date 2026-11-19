@@ -9,10 +9,11 @@ import numpy as np
 from scipy.stats import poisson
 from sklearn.linear_model import PoissonRegressor
 
-from domain import AS_OF,connect,net_contribution,overlaps
-from forecasting import arrival_features,daily_records,pipeline,close_features
-from decision_engine import compare_calendar,joint_allocation,maintenance_options,replay_future,choose_service_allocation
-from assistant_chat import respond,execute_tool
+from yieldcrest.datasets import read_dataset
+from yieldcrest.domain import AS_OF,ROOT,connect,net_contribution,overlaps
+from yieldcrest.forecasting import arrival_features,daily_records,pipeline,close_features
+from yieldcrest.decision_engine import compare_calendar,joint_allocation,maintenance_options,replay_future,choose_service_allocation
+from yieldcrest.assistant_chat import respond,execute_tool
 
 
 def validate():
@@ -69,7 +70,7 @@ def validate():
     calls=[
         {"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"compare_calendar","args":{"request_id":1,"face":1,"shift":-5}},"thoughtSignature":"preserved"}]}}]},
         {"candidates":[{"content":{"role":"model","parts":[{"text":"The earlier dates reduce the calculated threshold."}]}}]}]
-    with patch("assistant_chat.choose_model",return_value="test"),patch("assistant_chat.api_call",side_effect=calls):
+    with patch("yieldcrest.assistant_chat.choose_model",return_value="test"),patch("yieldcrest.assistant_chat.api_call",side_effect=calls):
         answer,traces,_=respond("test","move earlier",[],{"settings":{}})
         assert traces[0]["result"]["break_even_gross"]==moved["break_even_gross"]
     for invalid in [{"partner_share":2},{"funding":-1}]:
@@ -84,19 +85,20 @@ def validate():
 def replay():
     result=[]
     with connect() as db:
-        history=list(daily_records(db,AS_OF))
         for cutoff in ["2025-07-01","2026-03-01","2026-08-01"]:
-            train=[r for r in history if r[0]<cutoff]
+            train_x,train_y,_=read_dataset(f"demand/replay/{cutoff}/train.csv")
+            _,_,test_rows=read_dataset(f"demand/replay/{cutoff}/test.csv")
             model=pipeline(PoissonRegressor(alpha=.08,max_iter=1000))
-            model.fit([r[2] for r in train],[r[3] for r in train])
+            model.fit(train_x,train_y)
             for horizon in [30,14,7]:
                 start=date.fromisoformat(cutoff)
                 end=start+timedelta(days=horizon-1)
                 observed=[];expected=[];covered=[]
                 for face in range(1,13):
-                    count=db.execute("SELECT count(*) FROM enquiries WHERE face_id=? AND received BETWEEN ? AND ?",
-                                     (face,str(start),str(end))).fetchone()[0]
-                    features=[arrival_features(db,face,start+timedelta(days=i)) for i in range(horizon)]
+                    selected=[r for r in test_rows if int(r["face"])==face and str(start)<=r["date"]<=str(end)]
+                    count=sum(float(r["enquiry_count"]) for r in selected)
+                    features=[{key:r[key] if key=="face" else float(r[key]) for key in
+                               ["face","festive_sales_period","month_sin","month_cos"]} for r in selected]
                     mean=float(model.predict(features).sum())
                     low,high=poisson.ppf([.1,.9],mean)
                     observed.append(count>0)
@@ -107,7 +109,7 @@ def replay():
                                "Observed share with enquiries":round(float(np.mean(observed)),3),
                                "Count interval coverage":round(float(np.mean(covered)),3),
                                "Brier":round(float(np.mean((np.array(expected)-observed)**2)),4)})
-    Path(__file__).with_name("models").joinpath("replay.json").write_text(json.dumps({"replays":result,
+    (ROOT / "reports" / "replay.json").write_text(json.dumps({"replays":result,
         "interpretation":"Synthetic enquiry-count replay only. Three decision dates; site observations share seasonal demand conditions. No counterfactual revenue claim."},indent=2))
     print("Wrote synthetic T−30 / T−14 / T−7 rolling replay.")
 
@@ -115,3 +117,4 @@ def replay():
 if __name__=="__main__":
     validate()
     replay()
+

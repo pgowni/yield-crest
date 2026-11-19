@@ -6,7 +6,8 @@ from contextlib import contextmanager
 
 AS_OF = date(2026, 11, 19)
 HORIZON_END = date(2026, 12, 31)
-DATABASE = Path(__file__).with_name("yieldcrest.sqlite")
+ROOT = Path(__file__).resolve().parents[1]
+DATABASE = ROOT / "data" / "yieldcrest.sqlite"
 
 
 @contextmanager
@@ -44,3 +45,4 @@ def net_contribution(gross, duration, share=1.0, commission=0.0,
     if cash_adjust:
         receipt /= (1 + annual_rate) ** (max(delay, 0) / 365)
     return receipt - absorbed - duration * electricity_daily * int(illuminated)
+

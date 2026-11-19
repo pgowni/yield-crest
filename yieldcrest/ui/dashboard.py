@@ -5,9 +5,9 @@ import json
 import pandas as pd
 import streamlit as st
 
-from domain import AS_OF,HORIZON_END,connect,days,overlaps
-from decision_engine import live_requests,existing_blocks,clear,payment_profile,future_values
-from ui.layout import header,navigate,navigation,occupancy
+from yieldcrest.domain import AS_OF,HORIZON_END,ROOT,connect,days,overlaps
+from yieldcrest.decision_engine import live_requests,existing_blocks,clear,payment_profile,future_values
+from yieldcrest.ui.layout import header,navigate,navigation,occupancy
 
 PAGES=["Overview","Inventory","Enquiries","Decisions","Operations","Evidence"]
 money=lambda x:f"₹{x:,.0f}"
@@ -121,14 +121,14 @@ def render():
                     ORDER BY e.received DESC LIMIT 300
                 """)],hide_index=True,use_container_width=True)
         elif section=="Decisions":
-            from ui.decisions import render as decisions
+            from yieldcrest.ui.decisions import render as decisions
             decisions()
         elif section=="Operations":
-            from ui.operations import render as operations
+            from yieldcrest.ui.operations import render as operations
             operations()
         else:
             st.subheader("What the models learned")
-            report=json.loads(Path(__file__).parents[1].joinpath("models/evaluation.json").read_text())
+            report=json.loads((ROOT / "reports" / "evaluation.json").read_text())
             st.caption("Synthetic replay checks implementation and chronology. These scores establish no real-world forecast accuracy or revenue uplift.")
             st.write(f"Offer classifier selected on validation: **{report['close_selected_on_validation']}**")
             st.dataframe(report["offer_metrics"],hide_index=True,use_container_width=True)
@@ -136,17 +136,18 @@ def render():
             st.write("Lower Brier score is better. Training outcomes must be known before the split date; prior-client counts use only bookings completed before the quote.")
             st.subheader("Future enquiry arrivals")
             st.json(report["arrival_metrics"])
-            replay=Path(__file__).parents[1].joinpath("models/replay.json")
+            replay=(ROOT / "reports" / "replay.json")
             if replay.exists():
                 st.subheader("T−30, T−14 and T−7 replay")
                 st.dataframe(json.loads(replay.read_text())["replays"],hide_index=True,use_container_width=True)
                 st.caption("Counts are correlated across sites and seasons. The replay uses dated enquiry arrivals and discrete Poisson count intervals, not unobservable revenue from rejected alternatives.")
             with st.expander("Dataset and generator assumptions"):
-                st.json(json.loads(Path(__file__).parents[1].joinpath("data/generator_parameters.json").read_text()))
+                st.json(json.loads((ROOT / "data" / "generator_parameters.json").read_text()))
                 st.table([{"Table":r[0],"Rows":db.execute("SELECT count(*) FROM "+r[0]).fetchone()[0]}
                           for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")])
             for limitation in report["limitations"]:
                 st.write("• "+limitation)
 
-    from ui.chat_panel import render as render_chat_panel
+    from yieldcrest.ui.chat_panel import render as render_chat_panel
     render_chat_panel(section)
+
