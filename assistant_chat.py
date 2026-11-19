@@ -23,6 +23,10 @@ TOOLS=[
 ]
 
 
+class ModelUnavailable(RuntimeError):
+    pass
+
+
 def api_call(key, path, payload=None):
     data=json.dumps(payload).encode() if payload is not None else None
     request=Request(BASE+path,data=data,headers={"x-goog-api-key":key,"Content-Type":"application/json"})
@@ -31,6 +35,8 @@ def api_call(key, path, payload=None):
             return json.load(response)
     except HTTPError as error:
         # Never expose request URLs, headers or vendor error bodies containing secrets.
+        if error.code == 404:
+            raise ModelUnavailable("Selected Gemini model is unavailable.") from None
         messages={400:"Gemini rejected this request. Check the selected model supports tools.",
                   401:"Gemini authentication failed.",403:"Gemini key or project access was rejected.",
                   404:"Selected Gemini model is unavailable.",429:"Gemini quota is exhausted. Try later or change the project quota."}
@@ -39,7 +45,7 @@ def api_call(key, path, payload=None):
         raise RuntimeError("Gemini could not be reached. All calculation controls remain available.") from None
 
 
-def choose_model(key, configured=""):
+def choose_model(key, configured="", excluded=()):
     if configured:
         if not re.fullmatch(r"[a-zA-Z0-9._-]+",configured):
             raise ValueError("Use a Gemini model ID only.")
@@ -47,10 +53,17 @@ def choose_model(key, configured=""):
     result=api_call(key,"/models")
     candidates=[m["name"].removeprefix("models/") for m in result.get("models",[])
                 if "generateContent" in m.get("supportedGenerationMethods",[])
-                and any(x in m["name"] for x in ["flash","hydrogen"])]
+                and any(x in m["name"] for x in ["flash","hydrogen"])
+                and m["name"].removeprefix("models/") not in excluded
+                and m.get("modelStage") != "RETIRED"]
     if not candidates:
         raise RuntimeError("No suitable text-generation model found. Enter a supported Gemini model ID in settings.")
-    candidates.sort(key=lambda name:("preview" in name or "exp" in name,"lite" not in name,name))
+    def preference(name):
+        version = re.search(r"gemini-(\d+)(?:\.(\d+))?", name)
+        major = int(version.group(1)) if version else 0
+        minor = int(version.group(2) or 0) if version else 0
+        return ("preview" in name or "exp" in name, -major, -minor, "lite" in name, name)
+    candidates.sort(key=preference)
     return candidates[0]
 
 
@@ -94,11 +107,19 @@ def respond(key,question,history,context,configured_model=""):
               for m in history[-8:]]
     contents.append({"role":"user","parts":[{"text":question}]})
     traces=[]
-    for _ in range(4):
-        result=api_call(key,f"/models/{model}:generateContent",
+    unavailable=set()
+    for _ in range(6):
+        try:
+            result=api_call(key,f"/models/{model}:generateContent",
                         {"systemInstruction":{"parts":[{"text":system}]},"contents":contents,
                          "tools":[{"functionDeclarations":TOOLS}],
                          "generationConfig":{"temperature":.2,"maxOutputTokens":1400}})
+        except ModelUnavailable:
+            if configured_model or len(unavailable) >= 2:
+                raise
+            unavailable.add(model)
+            model=choose_model(key,excluded=unavailable)
+            continue
         candidates=result.get("candidates",[])
         if not candidates:
             raise RuntimeError("Gemini returned no response. Try a shorter question.")
