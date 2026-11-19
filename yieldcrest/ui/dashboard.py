@@ -9,7 +9,7 @@ from yieldcrest.domain import AS_OF,HORIZON_END,ROOT,connect,days,overlaps
 from yieldcrest.decision_engine import live_requests,existing_blocks,clear,payment_profile,future_values
 from yieldcrest.ui.layout import header,navigate,navigation,occupancy
 
-PAGES=["Overview","Inventory","Enquiries","Decisions","Operations","Evidence"]
+PAGES=["Overview","Inventory","Enquiries","Decisions","Operations"]
 money=lambda x:f"₹{x:,.0f}"
 
 
@@ -29,7 +29,7 @@ def site_calendar(db):
                 break
             opening=max(opening,date.fromisoformat(end)+timedelta(days=1))
         next_start=next((a for a,b in sorted(blocks) if a>str(opening)),None)
-        result.append({"ID":face["id"],"Location":face["name"],"Zone":face["zone"],"Format":face["format"],
+        result.append({"ID":face["id"],"Board":f"YC-{face["id"]:03d}","Location":face["name"],"Zone":face["zone"],"Format":face["format"],
                        "Available from":str(opening),"Next campaign":next_start or "—",
                        "Base daily rent":face["base_daily"],"Electricity / day":face["electricity_daily"]})
     return result
@@ -38,6 +38,8 @@ def site_calendar(db):
 def render():
     header()
     st.session_state.setdefault("page","Overview")
+    if st.session_state.page not in PAGES:
+        st.session_state.page="Overview"
     section=navigation(PAGES)
     st.title("Portfolio overview" if section=="Overview" else section)
     st.caption("19 November 2026 · Synthetic demonstration · Planning through 31 December")
@@ -101,10 +103,20 @@ def render():
             for site in sites:
                 f=site["ID"]
                 match=clear(req["start_date"],req["end_date"],existing_blocks(db,f))
-                matches.append({"Location":site["Location"],"Free for entire campaign":match,
+                matches.append({"Board":site["Board"],"Location":site["Location"],"Format":site["Format"],"Free for entire campaign":match,
                                 "Client-confirmed":f in req["faces"]})
             st.dataframe(matches,hide_index=True,use_container_width=True)
             st.caption("A free site can be suggested, but allocation uses only locations the client confirmed for this request.")
+            if any(not row["Free for entire campaign"] and row["Client-confirmed"] for row in matches):
+                if st.button("Show available alternative boards",key=f"alternatives_{selected}"):
+                    alternatives=[{"Board":row["Board"],"Location":row["Location"],"Format":row["Format"],
+                                   "Client approval":"Already confirmed" if row["Client-confirmed"] else "Needs client approval"}
+                                  for row in matches if row["Free for entire campaign"]]
+                    if alternatives:
+                        st.dataframe(alternatives,hide_index=True,use_container_width=True)
+                        st.info("These boards are free for the full requested dates. Confirm the format, location and price with the client before substituting. No booking has been moved.")
+                    else:
+                        st.info("No board is free for the entire requested campaign. Dates or campaign requirements need to change.")
             def open_decision():
                 st.session_state.decision_request=selected
                 navigate("Decisions")
@@ -113,8 +125,10 @@ def render():
             st.write(f"Past settled invoices {profile['settled_invoices']} · Average invoice-to-payment {profile['mean_days_to_pay'] or 'unknown'} days · Overdue {money(profile['overdue_rupees'])}")
             with st.expander("Connected sales history"):
                 st.dataframe([dict(r) for r in db.execute("""
-                    SELECT e.id,c.name AS Client,f.name AS Site,e.received,e.requested_start,e.requested_end,
-                           o.gross,o.outcome,b.confirmed,i.issued,i.due,r.paid
+                    SELECT e.id AS "Enquiry ID",c.name AS Client,f.name AS Location,e.received AS "Enquiry received",
+                           e.requested_start AS "Requested start",e.requested_end AS "Requested end",
+                           o.gross AS "Proposed price (₹)",o.outcome AS "Offer outcome",b.confirmed AS "Booking confirmed",
+                           i.issued AS "Invoice issued",i.due AS "Payment due",r.paid AS "Payment received"
                     FROM enquiries e JOIN clients c ON c.id=e.client_id JOIN faces f ON f.id=e.face_id
                     JOIN offers o ON o.enquiry_id=e.id LEFT JOIN bookings b ON b.offer_id=o.id
                     LEFT JOIN invoices i ON i.booking_id=b.id LEFT JOIN receipts r ON r.invoice_id=i.id
@@ -126,27 +140,6 @@ def render():
         elif section=="Operations":
             from yieldcrest.ui.operations import render as operations
             operations()
-        else:
-            st.subheader("What the models learned")
-            report=json.loads((ROOT / "reports" / "evaluation.json").read_text())
-            st.caption("Synthetic replay checks implementation and chronology. These scores establish no real-world forecast accuracy or revenue uplift.")
-            st.write(f"Offer classifier selected on validation: **{report['close_selected_on_validation']}**")
-            st.dataframe(report["offer_metrics"],hide_index=True,use_container_width=True)
-            st.info("The selected classifier underperformed the historical win-rate baseline on the later test period. Its live probabilities are experimental and editable.")
-            st.write("Lower Brier score is better. Training outcomes must be known before the split date; prior-client counts use only bookings completed before the quote.")
-            st.subheader("Future enquiry arrivals")
-            st.json(report["arrival_metrics"])
-            replay=(ROOT / "reports" / "replay.json")
-            if replay.exists():
-                st.subheader("T−30, T−14 and T−7 replay")
-                st.dataframe(json.loads(replay.read_text())["replays"],hide_index=True,use_container_width=True)
-                st.caption("Counts are correlated across sites and seasons. The replay uses dated enquiry arrivals and discrete Poisson count intervals, not unobservable revenue from rejected alternatives.")
-            with st.expander("Dataset and generator assumptions"):
-                st.json(json.loads((ROOT / "data" / "generator_parameters.json").read_text()))
-                st.table([{"Table":r[0],"Rows":db.execute("SELECT count(*) FROM "+r[0]).fetchone()[0]}
-                          for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")])
-            for limitation in report["limitations"]:
-                st.write("• "+limitation)
 
     from yieldcrest.ui.chat_panel import render as render_chat_panel
     render_chat_panel(section)

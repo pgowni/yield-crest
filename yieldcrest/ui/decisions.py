@@ -35,12 +35,12 @@ def integrated_service(job,hold,probabilities,tolerance,share,lit,cash,funding):
 
 
 def scenario_settings():
-    with st.expander("Costs and cash timing"):
+    with st.expander("Electricity and payment timing"):
         a,b,c=st.columns(3)
         lit=a.toggle("Illuminate booked campaigns",value=True,key="lit")
-        cash=b.toggle("Adjust for receipt timing",value=False,key="cash")
-        funding=c.number_input("Annual funding rate (%)",0.,100.,12.,step=1.,key="funding")/100
-        st.caption("Illumination is an operator choice. Settled invoice timing informs the cash scenario; outstanding balances are shown separately.")
+        cash=b.toggle("Account for delayed payments",value=False,key="cash")
+        funding=c.number_input("Annual financing cost (%)",0.,100.,12.,step=1.,key="funding")/100
+        st.caption("Lighting adds electricity costs only when enabled. The payment switch reduces the value of receipts that arrive later, using settled payment history and your annual financing cost. This estimates the cost of waiting for money; it does not predict non-payment. These are scenario settings, not changes to stored records.")
     return {"lit":lit,"cash":cash,"funding":funding}
 
 
@@ -48,7 +48,7 @@ def render():
     settings=scenario_settings()
     with connect() as db:
         requests=live_requests(db)
-        names={r["id"]:r["name"] for r in db.execute("SELECT id,name FROM faces")}
+        names={r["id"]:f"YC-{r["id"]:03d} · {r["name"]} · {r["format"]}" for r in db.execute("SELECT id,name,format FROM faces")}
     single,portfolio=st.tabs(["Accept or preserve dates","Allocate competing requests"])
     context={"settings":settings,"request_ids":[{"id":r["id"],"client":r["client"],"confirmed_faces":r["faces"]} for r in requests],
              "face_ids":names}
@@ -57,8 +57,9 @@ def render():
         rid=st.selectbox("Campaign", [r["id"] for r in requests],format_func=lambda i:next(r["label"] for r in requests if r["id"]==i),key="decision_request")
         req=next(r for r in requests if r["id"]==rid)
         a,b,c=st.columns([1,1,1])
-        face=a.selectbox("Confirmed location",req["faces"],format_func=lambda i:names[i],key=f"face_{rid}")
-        gross=b.number_input("Gross media rent (₹)",0,1000000,int(req["gross"]),step=1000,key=f"gross_{rid}")
+        face=a.selectbox("Client-approved board",req["faces"],format_func=lambda i:names[i],key=f"face_{rid}")
+        st.caption("Each option identifies an individual board and its physical format. A different board or format requires client approval; the current demo has one board per location.")
+        gross=b.number_input("Proposed price (₹)",0,1000000,int(req["gross"]),step=1000,key=f"gross_{rid}")
         shift=c.slider("Move campaign (days)",-5,10,0,key=f"shift_{rid}")
         try:
             result=calendar_result(rid,face,shift,gross,**settings)
@@ -68,14 +69,15 @@ def render():
         context["current_calendar"]=result
         st.caption(f"{result['request']['start_date']} to {result['request']['end_date']} · Firm-offer comparison · Identical future demand in both calendars")
         a,b,c=st.columns(3)
-        a.metric("Break-even gross media rent",money(result["break_even_gross"]))
+        a.metric("Break-even proposed price",money(result["break_even_gross"]))
         b.metric("Expected advantage of accepting",money(result["difference"]))
         c.metric("Chance of no future booking if waiting",f"{result['wait']['probability_zero']:.0%}")
         view=pd.DataFrame([
-            {"Choice":"Accept this firm offer","Expected net":result["accept"]["expected"],"P10":result["accept"]["p10"],"P90":result["accept"]["p90"]},
-            {"Choice":"Keep the dates available","Expected net":result["wait"]["expected"],"P10":result["wait"]["p10"],"P90":result["wait"]["p90"]}])
+            {"Choice":"Accept this firm offer","Expected net":result["accept"]["expected"],"Lower outcome (10th percentile)":result["accept"]["p10"],"Upper outcome (90th percentile)":result["accept"]["p90"]},
+            {"Choice":"Keep the dates available","Expected net":result["wait"]["expected"],"Lower outcome (10th percentile)":result["wait"]["p10"],"Upper outcome (90th percentile)":result["wait"]["p90"]}])
         st.bar_chart(view.set_index("Choice")[["Expected net"]],color="#397e79",horizontal=True)
         st.dataframe(view,hide_index=True,use_container_width=True)
+        st.caption("The lower outcome has 10% of simulations below it; the upper outcome has 10% above it. Together they show the middle 80% of simulated outcomes, not a guaranteed range.")
         shifted=calendar_result(rid,face,-5,gross,**settings)
         st.info(f"Moving this campaign five days earlier changes the break-even rent to {money(shifted['break_even_gross'])}. The current offer contributes {money(result['offer_net'])} after share, commission, absorbed costs and selected lighting.")
         if settings["cash"]:
@@ -140,7 +142,7 @@ def render():
         b.metric("Partner-policy trade-off",money(joint["tradeoff"]))
         c.metric("Hold resolves",joint["hold_expiry"])
         st.dataframe([{"Client":a["client"],"Allocate":" + ".join(a["sites"]) or "Decline"} for a in recommended["assignments"]],hide_index=True,use_container_width=True)
-        st.caption(f"Portfolio P10–P90 {money(recommended['p10']-service_cost)} to {money(recommended['p90']-service_cost)} · All five eligible faces included.")
+        st.caption(f"Middle 80% of simulated portfolio outcomes {money(recommended['p10']-service_cost)} to {money(recommended['p90']-service_cost)} · All five eligible faces included.")
         with st.expander("Competing plans and probability sensitivity"):
             st.dataframe([{"Plan":" / ".join(a["client"]+": "+(",".join(a["sites"]) or "Decline") for a in p["assignments"]),
                            "Expected net":round(p["expected"]-service_cost),"Prakash included":p["partner"]} for p in joint["top_plans"]],hide_index=True,use_container_width=True)
