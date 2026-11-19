@@ -72,18 +72,9 @@ def render():
             c.metric("Overdue invoice balance",money(due), help='Unpaid invoice balance past its due date on the planning date. This is a collections measure.')
             st.caption("Booked rent is prorated to November display dates. Forecast is additional net contribution from currently open dates; invoice balances measure collections.")
             occupancy(len(sites),available)
-            left,right=st.columns([1.2,1])
-            with left:
-                st.subheader("Upcoming availability")
-                st.dataframe(pd.DataFrame(sorted(sites,key=lambda r:r["Available from"]))[["Location","Available from","Next campaign"]].head(6),hide_index=True,use_container_width=True)
-                st.button("Explore inventory →",on_click=navigate,args=("Inventory",))
-            with right:
-                st.subheader("Protect the festive window")
-                st.write("Compare a campaign that crosses 5 December with the same campaign moved five days earlier. Inspect the break-even price and the risk of earning nothing.")
-                st.button("Compare campaign dates →",on_click=navigate,args=("Decisions",))
-                st.subheader("Partner Agency and maintenance")
-                st.write("See the expected contribution traded for partner priority and which service window displaces the least rental value.")
-                st.button("Review operations →",on_click=navigate,args=("Operations",))
+            st.subheader("Upcoming availability")
+            st.dataframe(pd.DataFrame(sorted(sites,key=lambda r:r["Available from"]))[["Location","Available from","Next campaign"]].head(6),hide_index=True,use_container_width=True)
+            st.button("Explore inventory →",on_click=navigate,args=("Inventory",))
         elif section=="Inventory":
             zone=st.selectbox("Zone",["All"]+sorted({r["Zone"] for r in sites}))
             view=[r for r in sites if zone=="All" or r["Zone"]==zone]
@@ -145,4 +136,3 @@ def render():
 
     from yieldcrest.ui.chat_panel import render as render_chat_panel
     render_chat_panel(section)
-
