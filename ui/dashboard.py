@@ -147,3 +147,6 @@ def render():
                           for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")])
             for limitation in report["limitations"]:
                 st.write("• "+limitation)
+
+    from ui.chat_panel import render as render_chat_panel
+    render_chat_panel(section)

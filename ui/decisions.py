@@ -1,13 +1,11 @@
 from datetime import date
 import json
-import os
 
 import pandas as pd
 import streamlit as st
 
 from domain import AS_OF, connect
 from decision_engine import compare_calendar, joint_allocation, live_requests, maintenance_options, choose_service_allocation
-from assistant_chat import respond
 
 money=lambda value: f"₹{value:,.0f}"
 
@@ -137,44 +135,3 @@ def render():
             for item in joint["assumptions"]:
                 st.write("• "+item)
         st.session_state.latest_context=context
-    render_chat(context)
-
-
-def render_chat(context):
-    st.divider()
-    st.subheader("Ask YieldCrest")
-    st.caption("Ask why, move dates, change a probability, or explore a service window. Calculations run through the Python engine.")
-    try:
-        secret_key=st.secrets.get("GEMINI_API_KEY","")
-        configured=st.secrets.get("GEMINI_MODEL","")
-    except (FileNotFoundError,st.errors.StreamlitSecretNotFoundError):
-        secret_key="";configured=""
-    key=secret_key or os.environ.get("GEMINI_API_KEY","")
-    with st.expander("Assistant connection"):
-        st.caption("For shared access, add GEMINI_API_KEY to Streamlit app secrets. A personal key below lasts only for this browser session.")
-        personal=st.text_input("Gemini API key",type="password",key="personal_api_key") if not key else ""
-        model=st.text_input("Model ID (optional)",value=configured)
-        key=key or personal
-    st.session_state.setdefault("conversation",[])
-    if st.button("Clear conversation"):
-        st.session_state.conversation=[]
-    for message in st.session_state.conversation:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    question=st.chat_input("Why does moving the campaign change the break-even rent?",disabled=not bool(key))
-    if not key:
-        st.info("Connect Gemini to enable the conversation. All forecasts and what-if controls are usable above.")
-    if question:
-        with st.chat_message("user"):
-            st.write(question)
-        try:
-            with st.spinner("Checking the decision and recalculating when needed…"):
-                answer,traces,used=respond(key,question,st.session_state.conversation,context,model)
-            st.session_state.conversation.extend([{"role":"user","content":question},{"role":"assistant","content":answer}])
-            with st.chat_message("assistant"):
-                st.markdown(answer)
-                with st.expander("Calculation trace"):
-                    st.caption(used)
-                    st.json(traces)
-        except (RuntimeError,ValueError) as error:
-            st.error(str(error))

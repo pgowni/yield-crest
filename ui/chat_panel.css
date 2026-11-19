@@ -1,0 +1,32 @@
+.st-key-yc_chat{
+    position:fixed!important;
+    top:82px;
+    right:20px;
+    bottom:20px;
+    width:370px!important;
+    max-height:calc(100dvh - 102px);
+    overflow-y:auto;
+    z-index:1000;
+    padding:20px;
+    background:#fff;
+    border:1px solid #d5e0df;
+    border-top:4px solid #397e79;
+    border-radius:16px;
+    box-shadow:0 12px 44px #17333e21;
+}
+.st-key-yc_chat h3{font-size:1.35rem;margin:0;padding:0}
+.st-key-yc_chat [data-testid="stCaptionContainer"]{font-size:.78rem}
+.st-key-yc_chat [data-testid="stChatMessage"]{padding:10px;background:#f4f7f6;border-radius:10px}
+.st-key-yc_chat [data-testid="stChatInput"]{border-radius:12px}
+.st-key-yc_chat_messages{border-top:1px solid #e4eae9;padding-top:12px}
+.st-key-yc_chat_launcher{
+    position:fixed!important;
+    bottom:24px;
+    right:24px;
+    width:180px!important;
+    z-index:1000;
+}
+.st-key-yc_chat_launcher button{box-shadow:0 6px 20px #17333e30;border-radius:24px!important}
+@media(max-width:1099px){
+    .st-key-yc_chat{top:auto;right:12px;bottom:12px;width:min(370px,calc(100vw - 24px))!important;max-height:85dvh}
+}
