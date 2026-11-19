@@ -217,6 +217,7 @@ INSERT INTO "clients" VALUES(3,'Metro Furnishings');
 INSERT INTO "clients" VALUES(4,'Vista Cinemas');
 INSERT INTO "clients" VALUES(5,'Garden Foods');
 INSERT INTO "clients" VALUES(6,'City Mobility');
+INSERT INTO "clients" VALUES(7,'Prakash Ads');
 CREATE TABLE eligible_faces(request_id INTEGER REFERENCES requests NOT NULL,face_id INTEGER REFERENCES faces NOT NULL, basis text not null default 'Confirmed for this request',PRIMARY KEY(request_id,face_id));
 INSERT INTO "eligible_faces" VALUES(1,1,'Confirmed for this request');
 INSERT INTO "eligible_faces" VALUES(1,2,'Confirmed for this request');
@@ -767,6 +768,19 @@ INSERT INTO "invoices" VALUES(190,201,'2026-08-21','2026-09-20',27000);
 INSERT INTO "invoices" VALUES(191,202,'2026-08-21','2026-09-20',27300);
 INSERT INTO "invoices" VALUES(192,203,'2026-08-20','2026-09-19',39900);
 INSERT INTO "invoices" VALUES(193,204,'2026-08-22','2026-09-21',30600);
+CREATE TABLE maintenance_jobs(
+ id INTEGER PRIMARY KEY,
+ face_id INTEGER NOT NULL REFERENCES faces,
+ task TEXT NOT NULL,
+ earliest_start TEXT NOT NULL,
+ latest_finish TEXT NOT NULL,
+ duration_days INTEGER NOT NULL CHECK(duration_days>0),
+ last_service_date TEXT,
+ status TEXT NOT NULL CHECK(status IN ('Proposed','Scheduled','Completed')),
+ CHECK(earliest_start<=latest_finish),
+ CHECK(julianday(latest_finish)-julianday(earliest_start)+1>=duration_days));
+INSERT INTO "maintenance_jobs" VALUES(1,1,'Bulb replacement','2026-11-26','2026-12-10',2,NULL,'Proposed');
+INSERT INTO "maintenance_jobs" VALUES(2,3,'Electrical inspection','2026-11-19','2026-11-30',1,NULL,'Proposed');
 CREATE TABLE offers(id integer primary key,enquiry_id integer not null references enquiries, quoted text not null, rupees integer not null, outcome text not null, decided text);
 INSERT INTO "offers" VALUES(1,13,'2026-09-10',17600,'Won','2026-09-12');
 INSERT INTO "offers" VALUES(2,14,'2026-10-01',24000,'Won','2026-10-03');
@@ -1091,6 +1105,12 @@ INSERT INTO "offers" VALUES(320,332,'2026-07-21',18000,'Lost','2026-07-23');
 INSERT INTO "offers" VALUES(321,333,'2026-07-23',30600,'Won','2026-07-25');
 INSERT INTO "offers" VALUES(322,334,'2026-07-14',21600,'Lost','2026-07-16');
 INSERT INTO "offers" VALUES(323,335,'2026-07-25',23400,'Lost','2026-07-27');
+CREATE TABLE partner_policies(
+ client_id INTEGER PRIMARY KEY REFERENCES clients,
+ priority TEXT NOT NULL,
+ adplay_share_percent REAL CHECK(adplay_share_percent BETWEEN 0 AND 100),
+ contribution_tolerance_rupees INTEGER CHECK(contribution_tolerance_rupees>=0));
+INSERT INTO "partner_policies" VALUES(7,'Strategic partner',NULL,NULL);
 CREATE TABLE receipts(id integer primary key,invoice_id integer references invoices, paid text, rupees integer);
 INSERT INTO "receipts" VALUES(1,1,'2026-11-18',17600);
 INSERT INTO "receipts" VALUES(2,3,'2026-11-04',17600);
