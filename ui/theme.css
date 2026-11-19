@@ -1,0 +1,18 @@
+.stApp{background:#f5f6f5;color:#202f36}
+.block-container{max-width:1220px;padding-top:2.6rem}
+.yc-brand{font:700 21px system-ui;letter-spacing:-1px;color:#203b42;border-bottom:1px solid #cdd6d5;padding-bottom:16px}
+.yc-brand span{font:400 13px system-ui;color:#526568;letter-spacing:0;margin-left:14px}
+h1{letter-spacing:-.055em}h2,h3{letter-spacing:-.035em}
+[data-testid="stMetric"]{background:white;border:1px solid #dae1df;border-radius:9px;padding:16px}
+.yc-panel{background:#203c44;color:#fff;padding:22px 26px;border-radius:10px;margin:12px 0}
+.yc-panel strong{font:500 34px Georgia;display:block;padding:5px 0}
+.yc-panel small{color:#d2e1df}
+
+.yc-mast{background:linear-gradient(112deg,#152e3c,#21545a);border-radius:16px;color:white;padding:26px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 5px 20px #182a3814}
+.yc-name{font:600 27px Georgia,serif;letter-spacing:-1px}.yc-mark{color:#90dfbd;margin-right:10px}.yc-context{font:500 13px system-ui;color:#c4dedb}
+.yc-summary{background:white;border:1px solid #d8e1df;border-radius:14px;padding:18px 22px;margin:12px 0}
+.yc-track{background:#dcebe6;height:12px;border-radius:20px;overflow:hidden;margin:12px 0}
+.yc-fill{height:100%;background:#438478}.yc-sub{color:#54676b;font-size:14px}
+[data-testid="stMetric"]{border-top:3px solid #528b80;box-shadow:0 2px 9px #223e4710}
+[data-testid="stButton"] button{border-radius:8px;font-weight:600}
+@media(max-width:600px){.yc-mast{padding:16px}.yc-context{font-size:11px}}
