@@ -35,6 +35,15 @@ def integrated_service(job,hold,probabilities,tolerance,share,lit,cash,funding):
 
 
 
+def reset_campaign_inputs():
+    """Discard scenario overrides when switching requests or explicitly resetting."""
+    for key in list(st.session_state):
+        if key.startswith(("gross_", "shift_", "face_")):
+            del st.session_state[key]
+    st.session_state.pop("latest_context", None)
+    st.session_state.pop("yc_explanations", None)
+
+
 def render():
     settings={"lit":True,"cash":False,"funding":.12}
     with connect() as db:
@@ -45,8 +54,9 @@ def render():
              "face_ids":names}
     with single:
         st.subheader("What would make this campaign worth accepting?")
-        rid=st.selectbox("Campaign", [r["id"] for r in requests],format_func=lambda i:next(r["label"] for r in requests if r["id"]==i),key="decision_request")
+        rid=st.selectbox("Campaign", [r["id"] for r in requests],format_func=lambda i:next(r["label"] for r in requests if r["id"]==i),key="decision_request",on_change=reset_campaign_inputs)
         req=next(r for r in requests if r["id"]==rid)
+        st.button("Reset campaign scenario",on_click=reset_campaign_inputs)
         a,b,c=st.columns([1,1,1])
         face=a.selectbox("Client-approved board",req["faces"],format_func=lambda i:names[i],key=f"face_{rid}")
         st.caption("Each option identifies an individual board and its physical format. A different board or format requires client approval; the current demo has one board per location.")
@@ -69,8 +79,13 @@ def render():
         st.bar_chart(view.set_index("Choice")[["Expected net"]],color="#397e79",horizontal=True)
         st.dataframe(view,hide_index=True,use_container_width=True)
         st.caption("The lower outcome has 10% of simulations below it; the upper outcome has 10% above it. Together they show the middle 80% of simulated outcomes, not a guaranteed range.")
-        shifted=calendar_result(rid,face,-5,gross,**settings)
-        st.info(f"Moving this campaign five days earlier changes the break-even rent to {money(shifted['break_even_gross'])}. The current offer contributes {money(result['offer_net'])} after share, commission, absorbed costs and selected lighting.")
+        st.caption(f"Showing {req['label']} · {names[face]} · Proposed price {money(gross)} · Date shift {shift:+d} days. Refreshing with identical inputs produces identical forecasts.")
+        with st.expander("Compare with dates five days earlier"):
+            try:
+                shifted=calendar_result(rid,face,shift-5,gross,**settings)
+                st.info(f"For {req['label']} at {names[face]}, moving the currently selected dates five days earlier gives {shifted['request']['start_date']} to {shifted['request']['end_date']}. The break-even proposed price becomes {money(shifted['break_even_gross'])}, compared with {money(result['break_even_gross'])} for the selected dates.")
+            except ValueError as error:
+                st.info("A five-days-earlier campaign is not feasible: "+str(error))
         if settings["cash"]:
             cash_value=result["expected_cash_by_november_end"]
             st.caption("Expected receipts from this firm offer by 30 November: "+(money(cash_value) if cash_value is not None else "insufficient settled payment history")+". Demo timing assumes invoicing at campaign end and no default.")
