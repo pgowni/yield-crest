@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from domain import AS_OF, connect
-from decision_engine import compare_calendar, joint_allocation, live_requests, maintenance_options
+from decision_engine import compare_calendar, joint_allocation, live_requests, maintenance_options, choose_service_allocation
 from assistant_chat import respond
 
 money=lambda value: f"₹{value:,.0f}"
@@ -25,6 +25,11 @@ def joint_result(hold,probabilities,tolerance,share,lit,cash,funding,maintenance
 @st.cache_data(show_spinner=False)
 def service_result(job,lit,cash,funding):
     return maintenance_options(job,lit,cash,funding)
+
+
+@st.cache_data(show_spinner=False)
+def integrated_service(job,hold,probabilities,tolerance,share,lit,cash,funding):
+    return choose_service_allocation(job,hold,probabilities,tolerance,share,lit,cash,funding)
 
 
 def scenario_settings():
@@ -92,17 +97,19 @@ def render():
         tolerance=b.number_input("Prakash priority tolerance (₹)",0,100000,5000,step=1000)
         share=c.number_input("AdPlay share of Prakash bill (%)",1.,100.,80.,step=1.)/100
         st.caption("The 80% share and ₹5,000 priority tolerance are editable demo assumptions. Longer holds keep the displayed close chances fixed.")
-        include=st.toggle("Include the lowest-cost Ameerpet service window",value=False)
+        include=st.toggle("Schedule Ameerpet maintenance alongside these requests",value=False)
         maintenance={}
         service_cost=0
         if include:
-            service=service_result(1,**settings)
-            if service["windows"]:
-                window=service["windows"][0]
-                maintenance={service["job"]["face_id"]:[(window["Start"],window["Finish"])]}
-                service_cost=service["job"]["service_cost"]
-                st.caption(f"Service scheduled for {window['Start']} to {window['Finish']}. Rental availability is blocked; a fixed {money(service_cost)} service expense applies to every plan.")
-        joint=joint_result(hold,probabilities,tolerance,share,maintenance=maintenance,**settings)
+            with st.spinner("Comparing service windows and booking assignments together…"):
+                integrated=integrated_service(1,hold,probabilities,tolerance,share,**settings)
+            maintenance=integrated["blocks"]
+            service_cost=integrated["service_cost"]
+            window=integrated["window"]
+            joint=integrated["result"]
+            st.caption(f"Best joint service window {window['Start']} to {window['Finish']}. Rental availability is blocked; {money(service_cost)} service expense applies.")
+        else:
+            joint=joint_result(hold,probabilities,tolerance,share,maintenance=maintenance,**settings)
         context["allocation_settings"]={"hold_days":hold,"probabilities":probabilities,"partner_tolerance":tolerance,
                                         "partner_share":share,"maintenance":maintenance,**settings}
         context["current_allocation"]=joint

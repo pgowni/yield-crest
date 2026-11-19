@@ -1,7 +1,7 @@
 import streamlit as st
 
 from domain import connect
-from ui.decisions import service_result,joint_result,money
+from ui.decisions import service_result,joint_result,money,integrated_service
 
 
 def render():
@@ -28,6 +28,10 @@ def render():
     c.metric("Service expense",money(best["Service cost"]))
     st.dataframe(service["windows"],hide_index=True,use_container_width=True)
     st.caption("All dates use identical future-demand paths. A short service block can displace an entire campaign if its consecutive dates cannot fit.")
+    if st.button("Find best service dates alongside current requests"):
+        combined=integrated_service(selected,3,{},policy["tolerance_rupees"],policy["share"],True,False,.12)
+        st.info(f"Joint planning chooses {combined['window']['Start']} to {combined['window']['Finish']}, with expected portfolio net {money(combined['net'])} after the service expense.")
+        st.dataframe([{"Client":r["client"],"Allocate":", ".join(r["sites"]) or "Decline"} for r in combined["result"]["recommended"]["assignments"]],hide_index=True,use_container_width=True)
     chosen=st.selectbox("Compare a service window",service["windows"],format_func=lambda w:w["Start"]+" to "+w["Finish"])
     if st.button("Check impact on current requests"):
         blocks={job["face_id"]:[(chosen["Start"],chosen["Finish"])]}

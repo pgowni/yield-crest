@@ -195,6 +195,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
         # For a given plan and close outcome, the forecast is recomputed against
         # those exact occupied intervals and the hold release date.
         value_cache={}
+        gains={(r["id"],f):request_net(db,r,f,cash,funding,lit)/r["quantity"] for r in requests for f in r["faces"]}
         def face_revenue(face, locked, outcome):
             key=(face,tuple((r["id"],ok) for r,ok in zip(locked,outcome)))
             if key in value_cache:
@@ -208,7 +209,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
                     # intersects a held interval, even when that offer later fails.
                     if ok:
                         occupied.append((r["start_date"],r["end_date"]))
-                        value+=request_net(db,r,face,cash,funding,lit)/r["quantity"]
+                        value+=gains[(r["id"],face)]
                 filtered=[e for e in events if not any(
                     e["arrival"]<release and overlaps(e["start"],e["end"],r["start_date"],r["end_date"])
                     for r in locked)]
@@ -281,3 +282,19 @@ def maintenance_options(job_id, lit=True, cash=False, funding=.12):
                            "Service cost":job["service_cost"]})
         result.sort(key=lambda r:r["Expected rental displaced"])
         return {"job":job,"windows":result,"evidence":evidence}
+
+
+def choose_service_allocation(job_id,hold_days=3,probabilities=None,partner_tolerance=0,
+                              partner_share=.8,lit=True,cash=False,funding=.12):
+    """Choose work dates and booking commitments together across all feasible windows."""
+    options=maintenance_options(job_id,lit,cash,funding)
+    if not options["windows"]:
+        raise ValueError("No service window meets the technician deadline.")
+    best=None
+    for window in options["windows"]:
+        blocks={options["job"]["face_id"]:[(window["Start"],window["Finish"])]}
+        result=joint_allocation(hold_days,probabilities,partner_tolerance,partner_share,lit,cash,funding,blocks)
+        net=result["recommended"]["expected"]-options["job"]["service_cost"]
+        if best is None or net>best["net"]:
+            best={"window":window,"result":result,"net":net,"blocks":blocks,"service_cost":options["job"]["service_cost"]}
+    return best

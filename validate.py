@@ -11,7 +11,7 @@ from sklearn.linear_model import PoissonRegressor
 
 from domain import AS_OF,connect,net_contribution,overlaps
 from forecasting import arrival_features,daily_records,pipeline,close_features
-from decision_engine import compare_calendar,joint_allocation,maintenance_options,replay_future
+from decision_engine import compare_calendar,joint_allocation,maintenance_options,replay_future,choose_service_allocation
 from assistant_chat import respond,execute_tool
 
 
@@ -63,6 +63,8 @@ def validate():
     w=service["windows"][0]
     constrained=joint_allocation(maintenance={service["job"]["face_id"]:[(w["Start"],w["Finish"])]})
     assert constrained["recommended"]["expected"]>=0
+    integrated=choose_service_allocation(1)
+    assert integrated["net"]>=constrained["recommended"]["expected"]-service["job"]["service_cost"]-1e-6
     # Tool protocol test. All numbers in the response come from the executed Python function.
     calls=[
         {"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"compare_calendar","args":{"request_id":1,"face":1,"shift":-5}},"thoughtSignature":"preserved"}]}}]},
