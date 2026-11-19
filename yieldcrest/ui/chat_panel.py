@@ -1,10 +1,10 @@
 """Persistent assistant drawer shared by every workspace."""
-import os
 from pathlib import Path
 
 import streamlit as st
 
-from yieldcrest.assistant_chat import respond
+from yieldcrest.llm import respond_with_fallback
+from yieldcrest.ui.connection import connection, connection_label, render_settings, save_settings
 from yieldcrest.domain import AS_OF, connect
 from yieldcrest.decision_engine import live_requests
 
@@ -14,8 +14,7 @@ def set_open(value):
 
 
 def save_connection():
-    st.session_state.yc_saved_key = st.session_state.get("yc_key_input", "")
-    st.session_state.yc_saved_model = st.session_state.get("yc_model_input", "")
+    save_settings()
 
 
 def clear_conversation():
@@ -62,14 +61,8 @@ def render(section):
                         help="Minimize the assistant. Your conversation stays available.")
         st.caption(f"Viewing {section} · Conversation follows you across workspaces")
 
-        try:
-            server_key = st.secrets.get("GEMINI_API_KEY", "")
-            server_model = st.secrets.get("GEMINI_MODEL", "")
-        except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
-            server_key = ""
-            server_model = ""
-        key = server_key or os.environ.get("GEMINI_API_KEY", "") or st.session_state.get("yc_saved_key", "")
-        model = st.session_state.get("yc_saved_model", server_model)
+        config = connection()
+        connected = bool(config["gemini_key"] or config["openai_key"])
 
         with st.container(height=280, border=False, key="yc_chat_messages"):
             if not st.session_state.conversation:
@@ -77,38 +70,37 @@ def render(section):
                 st.write("Ask how festival demand changes an offer, why Prakash gets priority, or which maintenance dates protect revenue.")
             for message in st.session_state.conversation:
                 with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+                    if message.get("error"):
+                        st.warning(message["content"])
+                    else:
+                        st.markdown(message["content"])
+                    if message.get("provider"):
+                        st.caption("Answered by "+message["provider"]+(" after Gemini failed" if message.get("fallback_reason") else ""))
                     if message.get("traces"):
-                        with st.expander("Calculation trace"):
-                            st.json(message["traces"])
+                        with st.expander("Calculations used"):
+                            for trace in message["traces"]:
+                                label = {"compare_calendar":"Campaign calendar and break-even recalculated",
+                                         "joint_allocation":"Competing bookings and partner policy compared",
+                                         "maintenance_options":"Feasible service windows compared"}.get(trace["tool"],"Decision calculation")
+                                st.write(label)
 
         question = st.chat_input("Ask about this portfolio or change a scenario…",
-                                 key="yc_chat_prompt", disabled=not bool(key))
-        if not key:
-            st.caption("Connect Gemini in Assistant connection to start chatting.")
-        else:
-            st.caption("Connected to Gemini · Synthetic portfolio")
-
-        with st.expander("Assistant connection"):
-            st.caption("Shared access uses GEMINI_API_KEY in Streamlit secrets. A personal key is kept only in this browser session.")
-            if not server_key and not os.environ.get("GEMINI_API_KEY", ""):
-                st.text_input("Gemini API key", type="password",
-                              value=st.session_state.get("yc_saved_key", ""), key="yc_key_input",
-                              on_change=save_connection)
-            st.text_input("Model ID (optional)", value=model, key="yc_model_input",
-                          on_change=save_connection)
+                                 key="yc_chat_prompt", disabled=not connected)
+        st.caption(connection_label(config))
+        render_settings(config)
         st.button("Clear conversation", key="yc_clear_chat", on_click=clear_conversation)
 
         if question:
+            history = [m for m in st.session_state.conversation if not m.get("error")]
+            st.session_state.conversation.append({"role":"user","content":question})
             try:
-                with st.spinner("Checking the model…"):
-                    answer, traces, used = respond(key, question, st.session_state.conversation,
-                                                   workspace_context(section), model)
-                st.session_state.conversation.extend([
-                    {"role": "user", "content": question},
-                    {"role": "assistant", "content": answer, "traces": traces, "model": used},
-                ])
-                st.rerun()
+                with st.spinner("Checking the figures · OpenAI backup enabled when configured…"):
+                    result = respond_with_fallback(question, history, workspace_context(section), **config)
+                st.session_state.conversation.append({
+                    "role":"assistant", "content":result["text"], "traces":result["traces"],
+                    "provider":result["provider"], "model":result["model"],
+                    "fallback_reason":result["fallback_reason"],
+                })
             except (RuntimeError, ValueError) as error:
-                st.error(str(error))
-
+                st.session_state.conversation.append({"role":"assistant","content":str(error),"error":True})
+            st.rerun()

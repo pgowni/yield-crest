@@ -55,20 +55,32 @@ The one-time generator is `python -m scripts.generate_data`. It refuses to overw
 an existing database. Regeneration is an intentional offline action.
 Only load the trusted fitted artifact committed to this repository.
 
-## Gemini connection
+## Assistant providers
 
 Add a server secret in Streamlit app settings:
 
 ```toml
-GEMINI_API_KEY = "your key"
-# Optional explicit supported model ID
-# GEMINI_MODEL = "your model ID"
+GEMINI_API_KEY = "your Gemini key"
+OPENAI_API_KEY = "your OpenAI key"
+# Optional model overrides
+# GEMINI_MODEL = "your supported Gemini model ID"
+OPENAI_MODEL = "gpt-4.1-mini"
 ```
 
-Keep keys out of GitHub. A personal session-only key can be entered in the floating
-assistant's connection panel. Scenario details and recent conversation are sent to
-Gemini only when a question is submitted. The assistant invokes bounded Python
+Keep keys out of GitHub. Personal session-only keys can be entered in the floating
+assistant's connection panel. Gemini is primary. On authentication, quota, unavailable-model,
+malformed-response or timeout failure, the same request is sent to OpenAI when its key is
+configured. OpenAI also works by itself. Gemini HTTP requests time out after 12 seconds.
+A successful primary response does not call the backup. The interface names the answering provider.
+
+Decision explanations show readable Python-generated paragraphs immediately.
+The optional Explain this decision with AI button calls the same provider router.
+Scenario details and recent conversation are sent only when a question or AI explanation
+is requested, to the provider used to answer. The assistant invokes bounded Python
 functions for calculations and cannot modify the database.
+
+Run provider-routing tests without credentials using
+`python -m unittest tests.test_llm`. Live OpenAI verification requires an owner-provided key.
 
 ## Reviewer workflow
 

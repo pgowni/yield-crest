@@ -1,10 +1,14 @@
 from datetime import date
 import json
+import hashlib
 
 import pandas as pd
 import streamlit as st
 
 from yieldcrest.domain import AS_OF, connect
+from yieldcrest.explanations import explain_calendar
+from yieldcrest.llm import respond_with_fallback
+from yieldcrest.ui.connection import connection
 from yieldcrest.decision_engine import compare_calendar, joint_allocation, live_requests, maintenance_options, choose_service_allocation
 
 money=lambda value: f"₹{value:,.0f}"
@@ -78,8 +82,27 @@ def render():
             cash_value=result["expected_cash_by_november_end"]
             st.caption("Expected receipts from this firm offer by 30 November: "+(money(cash_value) if cash_value is not None else "insufficient settled payment history")+". Demo timing assumes invoicing at campaign end and no default.")
         with st.expander("Why these figures?"):
-            st.json({"comparison":result,"model":"Poisson enquiry forecast + learned close probability + paired duration/rate samples; chronological online future bookings."})
-            st.caption("P10–P90 describes simulated outcomes. It does not measure how certain we are about learned parameters. Mostly pooled evidence can dominate thin site history.")
+            for paragraph in explain_calendar(result):
+                st.markdown(paragraph)
+            config=connection()
+            signature=hashlib.sha256(json.dumps({"result":result,"settings":settings},sort_keys=True,default=str).encode()).hexdigest()
+            st.session_state.setdefault("yc_explanations",{})
+            if st.button("Explain this decision with AI",disabled=not bool(config["gemini_key"] or config["openai_key"])):
+                try:
+                    with st.spinner("Writing an explanation from the calculated figures…"):
+                        explanation=respond_with_fallback(
+                            "Explain this computed calendar comparison for an advertising operator in 150 words. "
+                            "Use only the supplied figures. Cover net money, opportunity cost, threshold and risk. "
+                            "Do not calculate new amounts or return JSON.",[],{"current_calendar":result,"settings":settings},**config)
+                    st.session_state.yc_explanations={signature:explanation}
+                except (RuntimeError,ValueError) as error:
+                    st.warning("AI explanation unavailable. "+str(error))
+            saved=st.session_state.yc_explanations.get(signature)
+            if saved:
+                st.divider()
+                st.markdown(saved["text"])
+                st.caption("Explained by "+saved["provider"]+(" after Gemini failed" if saved["fallback_reason"] else ""))
+            st.caption("The explanation updates when the scenario changes. AI wording uses the Python model's results.")
     with portfolio:
         st.subheader("Choose commitments across the same calendar")
         st.caption("Three current requests, client-confirmed alternatives, independent close/fail outcomes. Every commitment is fixed before outcomes are revealed.")
