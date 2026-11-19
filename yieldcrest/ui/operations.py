@@ -10,7 +10,7 @@ def render():
         policy=dict(db.execute("SELECT p.*,c.name FROM partner_policies p JOIN clients c ON c.id=p.client_id").fetchone())
         jobs=[dict(r) for r in db.execute("SELECT j.*,f.name FROM maintenance_jobs j JOIN faces f ON f.id=j.face_id")]
     st.write(f"**{policy['name']}** · {policy['priority']}")
-    st.caption("Editable demo terms. In the decisions view, contribution tolerance selects the best Prakash plan within that amount of the financial best plan.")
+    st.caption("Editable demo terms. In the decisions view, contribution tolerance selects the best Partner Agency plan within that amount of the financial best plan.")
     st.table([{"AdPlay revenue share":f"{policy['share']:.0%}","Priority tolerance":money(policy["tolerance_rupees"])}])
     st.subheader("Choose a service window")
     selected=st.selectbox("Service job",[j["id"] for j in jobs],format_func=lambda i:next(j["name"]+" · "+j["task"] for j in jobs if j["id"]==i))
@@ -23,9 +23,9 @@ def render():
         return
     best=service["windows"][0]
     a,b,c=st.columns(3)
-    a.metric("Lowest-loss feasible start",best["Start"])
-    b.metric("Expected rental displaced",money(best["Expected rental displaced"]))
-    c.metric("Service expense",money(best["Service cost"]))
+    a.metric("Lowest-loss feasible start",best["Start"], help='Feasible maintenance start date expected to displace the least future rental contribution, respecting existing bookings and the service deadline.')
+    b.metric("Expected rental displaced",money(best["Expected rental displaced"]), help='Expected future rental contribution lost because maintenance blocks availability. A short block can prevent a longer consecutive campaign.')
+    c.metric("Service expense",money(best["Service cost"]), help='Direct cost of the selected maintenance job, separate from rental contribution displaced.')
     st.dataframe(service["windows"],hide_index=True,use_container_width=True)
     st.caption("All dates use identical future-demand paths. A short service block can displace an entire campaign if its consecutive dates cannot fit.")
     if st.button("Find best service dates alongside current requests"):
@@ -36,7 +36,7 @@ def render():
     if st.button("Check impact on current requests"):
         blocks={job["face_id"]:[(chosen["Start"],chosen["Finish"])]}
         comparison=joint_result(3,{},policy["tolerance_rupees"],policy["share"],True,False,.12,blocks)
-        st.metric("Expected net after service expense",money(comparison["recommended"]["expected"]-job["service_cost"]))
+        st.metric("Expected net after service expense",money(comparison["recommended"]["expected"]-job["service_cost"]), help='Expected portfolio contribution for this maintenance scenario after deducting the direct service cost.')
         st.dataframe([{"Client":r["client"],"Allocate":", ".join(r["sites"]) or "Decline"} for r in comparison["recommended"]["assignments"]],hide_index=True,use_container_width=True)
         st.caption("Scenario only. Choosing a window here does not confirm work or change stored bookings.")
 

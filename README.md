@@ -96,7 +96,7 @@ Run provider-routing tests without credentials using
 ## Interpretation
 
 The generator's festive period is December 5–20, an illustrative retail period.
-The 80% Prakash share and ₹5,000 priority tolerance are editable demo assumptions.
+The 80% Partner Agency share and ₹5,000 priority tolerance are editable demo assumptions.
 Faces 1–5 are reserved in the generator for review scenarios; operator-declined
 offers are excluded from offer-close training.
 

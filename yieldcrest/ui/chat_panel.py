@@ -67,7 +67,7 @@ def render(section):
         with st.container(height=280, border=False, key="yc_chat_messages"):
             if not st.session_state.conversation:
                 st.markdown("**Understand the decision. Explore another option.**")
-                st.write("Ask how festival demand changes an offer, why Prakash gets priority, or which maintenance dates protect revenue.")
+                st.write("Ask how festival demand changes an offer, why Partner Agency gets priority, or which maintenance dates protect revenue.")
             for message in st.session_state.conversation:
                 with st.chat_message(message["role"]):
                     if message.get("error"):

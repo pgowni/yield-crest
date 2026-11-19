@@ -257,7 +257,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
         preferred=next((p for p in plans if p["partner"] and financial["expected"]-p["expected"]<=partner_tolerance),financial)
         return {"recommended":preferred,"financial_best":financial,"tradeoff":round(financial["expected"]-preferred["expected"],2),
                 "top_plans":plans[:8],"probabilities":dict(zip([str(r["id"]) for r in requests],probability)),
-                "hold_expiry":release,"policy":"Prefer a Prakash allocation within the operator's contribution tolerance.",
+                "hold_expiry":release,"policy":"Prefer a Partner Agency allocation within the operator's contribution tolerance.",
                 "model_scope":"Skipped requests are declined. Failed holds release their exact faces to subsequent simulated enquiries. No client is assumed to wait past expiry.",
                 "assumptions":["Close outcomes assumed independent; the same close probability is held when changing hold length unless overridden.",
                                "Future arrivals follow an online first-feasible booking policy; this is a policy comparison, not perfect-foresight revenue.",

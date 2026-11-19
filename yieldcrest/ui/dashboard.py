@@ -53,8 +53,10 @@ def render():
                     ("Opening within 7 days",sum(str(AS_OF)<r["Available from"]<=str(AS_OF+timedelta(days=7)) for r in sites)),
                     ("Requests for review",len(requests)),
                     ("Proposed service jobs",db.execute("SELECT count(*) FROM maintenance_jobs WHERE status='Proposed'").fetchone()[0])]
+            metric_help={'Sites available': 'Boards free on the demo planning date, out of all boards in the portfolio.', 'Opening within 7 days': 'Currently occupied boards whose next availability begins within seven days of the planning date.', 'Requests for review': 'Current client enquiries available for evaluation. These are not confirmed bookings.', 'Proposed service jobs': 'Maintenance tasks marked as proposed in the database.', 'November booked gross rent': 'Confirmed campaign rent allocated to November display days, before commission and operating costs. This is not cash collected.', 'Forecast additional net · through Dec 31': 'Estimated additional contribution from future bookings on open dates through December 31, after modeled costs. Excludes rent from existing confirmed bookings; synthetic forecast.', 'Overdue invoice balance': 'Unpaid invoice balance past its due date on the planning date. This is a collections measure.', 'Break-even proposed price': 'Proposed gross price at which accepting and preserving the dates have equal expected contribution, under the selected cost settings.', 'Expected advantage of accepting': 'Expected net contribution with this firm offer minus expected contribution from keeping the dates available. Positive favors accepting; negative favors waiting.', 'Chance of no future booking if waiting': 'Share of simulated futures with no additional booking through the planning horizon if these dates remain open. This is not the current client’s close probability.', 'Expected portfolio net': 'Expected contribution from the evaluated boards and requests, including possible future bookings, modeled costs and any selected service expense. Not total company revenue.', 'Partner-policy trade-off': 'Expected contribution given up versus the financially best plan to honor the partner priority tolerance. Zero means the policy adds no expected loss.', 'Hold resolves': 'Date when uncertain offers resolve. Failed offers release their reserved dates afterward. Close chances stay fixed when hold length changes.', 'Lowest-loss feasible start': 'Feasible maintenance start date expected to displace the least future rental contribution, respecting existing bookings and the service deadline.', 'Expected rental displaced': 'Expected future rental contribution lost because maintenance blocks availability. A short block can prevent a longer consecutive campaign.', 'Service expense': 'Direct cost of the selected maintenance job, separate from rental contribution displaced.', 'Expected net after service expense': 'Expected portfolio contribution for this maintenance scenario after deducting the direct service cost.'}
+            metric_help.update({"Sites available":"Boards available on the demonstration date, out of all boards in the portfolio.","Opening within 7 days":"Currently occupied boards that become available within the next seven days. Excludes boards already free.","Requests for review":"Current enquiries awaiting evaluation. These are not confirmed bookings.","Proposed service jobs":"Maintenance jobs marked as proposed in the database. These are not scheduled commitments."})
             for col,(label,value) in zip(cols,values):
-                col.metric(label,value)
+                col.metric(label,value, help=metric_help[label])
             month_start="2026-11-01";month_end="2026-11-30"
             booked=0.
             for row in db.execute("""
@@ -65,9 +67,9 @@ def render():
                 booked+=row[2]*overlap/days(row[0],row[1])
             due=sum(payment_profile(db,c[0])["overdue_rupees"] for c in db.execute("SELECT id FROM clients"))
             a,b,c=st.columns(3)
-            a.metric("November booked gross rent",money(booked))
-            b.metric("Forecast additional net · through Dec 31",money(portfolio_forecast()))
-            c.metric("Overdue invoice balance",money(due))
+            a.metric("November booked gross rent",money(booked), help='Confirmed campaign rent allocated to November display days, before commission and operating costs. This is not cash collected.')
+            b.metric("Forecast additional net · through Dec 31",money(portfolio_forecast()), help='Estimated additional contribution from future bookings on open dates through December 31, after modeled costs. Excludes rent from existing confirmed bookings; synthetic forecast.')
+            c.metric("Overdue invoice balance",money(due), help='Unpaid invoice balance past its due date on the planning date. This is a collections measure.')
             st.caption("Booked rent is prorated to November display dates. Forecast is additional net contribution from currently open dates; invoice balances measure collections.")
             occupancy(len(sites),available)
             left,right=st.columns([1.2,1])
@@ -79,7 +81,7 @@ def render():
                 st.subheader("Protect the festive window")
                 st.write("Compare a campaign that crosses 5 December with the same campaign moved five days earlier. Inspect the break-even price and the risk of earning nothing.")
                 st.button("Compare campaign dates →",on_click=navigate,args=("Decisions",))
-                st.subheader("Prakash and maintenance")
+                st.subheader("Partner Agency and maintenance")
                 st.write("See the expected contribution traded for partner priority and which service window displaces the least rental value.")
                 st.button("Review operations →",on_click=navigate,args=("Operations",))
         elif section=="Inventory":

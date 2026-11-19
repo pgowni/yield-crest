@@ -69,9 +69,9 @@ def render():
         context["current_calendar"]=result
         st.caption(f"{result['request']['start_date']} to {result['request']['end_date']} · Firm-offer comparison · Identical future demand in both calendars")
         a,b,c=st.columns(3)
-        a.metric("Break-even proposed price",money(result["break_even_gross"]))
-        b.metric("Expected advantage of accepting",money(result["difference"]))
-        c.metric("Chance of no future booking if waiting",f"{result['wait']['probability_zero']:.0%}")
+        a.metric("Break-even proposed price",money(result["break_even_gross"]), help='Proposed gross price at which accepting and preserving the dates have equal expected contribution, under the selected cost settings.')
+        b.metric("Expected advantage of accepting",money(result["difference"]), help='Expected net contribution with this firm offer minus expected contribution from keeping the dates available. Positive favors accepting; negative favors waiting.')
+        c.metric("Chance of no future booking if waiting",f"{result['wait']['probability_zero']:.0%}", help='Share of simulated futures with no additional booking through the planning horizon if these dates remain open. This is not the current client’s close probability.')
         view=pd.DataFrame([
             {"Choice":"Accept this firm offer","Expected net":result["accept"]["expected"],"Lower outcome (10th percentile)":result["accept"]["p10"],"Upper outcome (90th percentile)":result["accept"]["p90"]},
             {"Choice":"Keep the dates available","Expected net":result["wait"]["expected"],"Lower outcome (10th percentile)":result["wait"]["p10"],"Upper outcome (90th percentile)":result["wait"]["p90"]}])
@@ -117,8 +117,8 @@ def render():
             probabilities[str(r["id"])]=col.slider(f"{r['client']} close chance (%)",0,100,round(learned[str(r["id"])]*100),key=f"p_{r['id']}")/100
         a,b,c=st.columns(3)
         hold=a.slider("Hold until · days from today",0,5,3)
-        tolerance=b.number_input("Prakash priority tolerance (₹)",0,100000,5000,step=1000)
-        share=c.number_input("AdPlay share of Prakash bill (%)",1.,100.,80.,step=1.)/100
+        tolerance=b.number_input("Partner Agency priority tolerance (₹)",0,100000,5000,step=1000)
+        share=c.number_input("AdPlay share of Partner Agency bill (%)",1.,100.,80.,step=1.)/100
         st.caption("The 80% share and ₹5,000 priority tolerance are editable demo assumptions. Longer holds keep the displayed close chances fixed.")
         include=st.toggle("Schedule Ameerpet maintenance alongside these requests",value=False)
         maintenance={}
@@ -138,20 +138,20 @@ def render():
         context["current_allocation"]=joint
         recommended=joint["recommended"]
         a,b,c=st.columns(3)
-        a.metric("Expected portfolio net",money(recommended["expected"]-service_cost))
-        b.metric("Partner-policy trade-off",money(joint["tradeoff"]))
-        c.metric("Hold resolves",joint["hold_expiry"])
+        a.metric("Expected portfolio net",money(recommended["expected"]-service_cost), help='Expected contribution from the evaluated boards and requests, including possible future bookings, modeled costs and any selected service expense. Not total company revenue.')
+        b.metric("Partner-policy trade-off",money(joint["tradeoff"]), help='Expected contribution given up versus the financially best plan to honor the partner priority tolerance. Zero means the policy adds no expected loss.')
+        c.metric("Hold resolves",joint["hold_expiry"], help='Date when uncertain offers resolve. Failed offers release their reserved dates afterward. Close chances stay fixed when hold length changes.')
         st.dataframe([{"Client":a["client"],"Allocate":" + ".join(a["sites"]) or "Decline"} for a in recommended["assignments"]],hide_index=True,use_container_width=True)
         st.caption(f"Middle 80% of simulated portfolio outcomes {money(recommended['p10']-service_cost)} to {money(recommended['p90']-service_cost)} · All five eligible faces included.")
         with st.expander("Competing plans and probability sensitivity"):
             st.dataframe([{"Plan":" / ".join(a["client"]+": "+(",".join(a["sites"]) or "Decline") for a in p["assignments"]),
-                           "Expected net":round(p["expected"]-service_cost),"Prakash included":p["partner"]} for p in joint["top_plans"]],hide_index=True,use_container_width=True)
-            if st.button("Sweep Prakash close probability"):
+                           "Expected net":round(p["expected"]-service_cost),"Partner Agency included":p["partner"]} for p in joint["top_plans"]],hide_index=True,use_container_width=True)
+            if st.button("Sweep Partner Agency close probability"):
                 sweep=[]
                 for probability in [0,.2,.4,.6,.8,1]:
                     ps=dict(probabilities);ps["1"]=probability
                     r=joint_result(hold,ps,tolerance,share,maintenance=maintenance,**settings)["recommended"]
-                    sweep.append({"Prakash chance":probability,"Expected net":r["expected"]-service_cost,
+                    sweep.append({"Partner Agency chance":probability,"Expected net":r["expected"]-service_cost,
                                   "Allocation":" / ".join(a["client"]+": "+(",".join(a["sites"]) or "Decline") for a in r["assignments"])})
                 st.dataframe(sweep,hide_index=True,use_container_width=True)
                 st.caption("Other close probabilities stay fixed. Changes are bracketed at 20-percentage-point resolution.")
