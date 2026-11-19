@@ -47,7 +47,7 @@ def render():
             st.subheader("Enquiries needing attention")
             st.write(f"**{conflicts} of {len(enquiries)} requests** overlap a confirmed booking at the requested location.")
             st.button("Review enquiries →", on_click=navigate, args=("Enquiries",))
-        st.html(f'<div class="yc-panel">Booking decision · Ameerpet and Dilsukhnagar<strong>₹{baseline:,.0f}</strong><small>Highest expected net contribution at the default agency hold and close probability</small></div>')
+        st.html(f'<div class="yc-panel">Booking decision · Five Hyderabad locations<strong>₹{baseline:,.0f}</strong><small>Highest expected net contribution at the default agency hold and close probability</small></div>')
         st.button("Compare booking options →", on_click=navigate, args=("Booking decisions",))
     elif section == "Inventory":
         available, opening = st.tabs(["Available now", "Upcoming vacancies"])
@@ -80,6 +80,8 @@ def render():
                 "SELECT start_day, duration_days, hold_days, close_probability, net_rupees "
                 "FROM requests WHERE client='Agency'"
             ).fetchone()
+            with st.expander("Locations confirmed for each request"):
+                st.table([{"Client": c, "Location": f, "Basis": b} for c, f, b in db.execute("SELECT r.client, f.name, e.basis FROM eligible_faces e JOIN requests r ON r.id=e.request_id JOIN faces f ON f.id=e.face_id ORDER BY r.id, f.name")])
             st.write(f"The agency offers ₹{rent:,} for a {duration}-day campaign starting in {start} days.")
             days = st.slider("Agency hold (days)", 0, start, hold)
             chance = st.slider("Agency close probability (%)", 0, 100, round(probability * 100))
