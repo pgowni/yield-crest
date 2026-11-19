@@ -74,6 +74,10 @@ def render():
             st.write(", ".join(alternatives) or "None")
             st.caption("Confirm location flexibility with the client before offering an alternative.")
         st.dataframe(enquiries, hide_index=True, use_container_width=True)
+        with st.expander("Sales history · enquiries to payments"):
+            with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True)) as db:
+                cursor = db.execute("""SELECT c.name AS Client, f.name AS Site, e.received AS Enquired, o.quoted AS Quoted, o.rupees AS Amount, o.outcome AS Outcome, o.decided AS Decided, b.start_date AS Booked_from, i.issued AS Invoiced, r.paid AS Paid FROM enquiries e JOIN clients c ON c.id=e.client_id JOIN faces f ON f.id=e.face_id JOIN offers o ON o.enquiry_id=e.id LEFT JOIN bookings b ON b.offer_id=o.id LEFT JOIN invoices i ON i.booking_id=b.id LEFT JOIN receipts r ON r.invoice_id=i.id ORDER BY e.received DESC""")
+                st.dataframe([dict(zip([col[0] for col in cursor.description], row)) for row in cursor], hide_index=True, use_container_width=True)
     else:
         with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True)) as db:
             start, duration, hold, probability, rent = db.execute(
