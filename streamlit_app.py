@@ -1,5 +1,6 @@
 from contextlib import closing
 import sqlite3
+from portfolio import AS_OF, inventory
 
 import streamlit as st
 
@@ -8,6 +9,25 @@ from yieldcrest_model import DATABASE, allocations
 st.set_page_config(page_title="YieldCrest · Booking decisions")
 st.title("YieldCrest")
 st.caption("Hyderabad · Synthetic booking data")
+st.header("Inventory overview")
+st.caption("Portfolio as of 19 November 2026")
+with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True)) as db:
+    sites = inventory(db)
+    enquiries = [dict(zip(("Client", "Location", "Received", "From", "Through"), row)) for row in db.execute(
+        "SELECT client, name, received, requested_start, requested_end FROM enquiries "
+        "JOIN faces ON faces.id=enquiries.face_id WHERE status='Open' ORDER BY received DESC"
+    )]
+free = [row for row in sites if row["Available from"] == AS_OF]
+upcoming = sorted((row for row in sites if row["Available from"] > AS_OF), key=lambda row: row["Available from"])
+a, b, c = st.columns(3)
+a.metric("Available today", len(free))
+b.metric("Opening in 7 days", sum((row["Available from"] - AS_OF).days <= 7 for row in upcoming))
+c.metric("Open enquiries", len(enquiries))
+now, soon, leads = st.tabs(["Available sites", "Upcoming vacancies", "Open enquiries"])
+now.table(free)
+soon.table(upcoming)
+leads.table(enquiries)
+st.divider()
 st.header("Compare booking decisions")
 with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True)) as db:
     start, duration, hold, probability, rent = db.execute(

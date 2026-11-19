@@ -15,7 +15,7 @@ def allocations(db, hold_days=None, close_probability=None):
     ).fetchall()
     if len({row[5:] for row in requests}) != 1:
         raise ValueError("This milestone supports one shared campaign window.")
-    faces = dict(db.execute("SELECT id, name FROM faces"))
+    faces = dict(db.execute("SELECT id, name FROM faces JOIN case_faces ON face_id=id"))
     choices = []
     gains = []
     for request_id, client, hold, probability, rent, start, duration in requests:
