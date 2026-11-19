@@ -34,18 +34,9 @@ def integrated_service(job,hold,probabilities,tolerance,share,lit,cash,funding):
     return choose_service_allocation(job,hold,probabilities,tolerance,share,lit,cash,funding)
 
 
-def scenario_settings():
-    with st.expander("Electricity and payment timing"):
-        a,b,c=st.columns(3)
-        lit=a.toggle("Illuminate booked campaigns",value=True,key="lit")
-        cash=b.toggle("Account for delayed payments",value=False,key="cash")
-        funding=c.number_input("Annual financing cost (%)",0.,100.,12.,step=1.,key="funding")/100
-        st.caption("Lighting adds electricity costs only when enabled. The payment switch reduces the value of receipts that arrive later, using settled payment history and your annual financing cost. This estimates the cost of waiting for money; it does not predict non-payment. These are scenario settings, not changes to stored records.")
-    return {"lit":lit,"cash":cash,"funding":funding}
-
 
 def render():
-    settings=scenario_settings()
+    settings={"lit":True,"cash":False,"funding":.12}
     with connect() as db:
         requests=live_requests(db)
         names={r["id"]:f"YC-{r["id"]:03d} · {r["name"]} · {r["format"]}" for r in db.execute("SELECT id,name,format FROM faces")}
