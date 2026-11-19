@@ -26,7 +26,27 @@ c.metric("Open enquiries", len(enquiries))
 now, soon, leads = st.tabs(["Available sites", "Upcoming vacancies", "Open enquiries"])
 now.table(free)
 soon.table(upcoming)
-leads.table(enquiries)
+with leads:
+    if enquiries:
+        selected = st.selectbox("Check campaign availability", enquiries, format_func=lambda e: f"{e['Client']} · {e['Location']} · {e['From']} to {e['Through']}")
+        with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True)) as db:
+            matches = db.execute("""
+                SELECT f.name, b.client, b.start_date, b.end_date
+                FROM faces f LEFT JOIN bookings b
+                  ON b.face_id=f.id AND b.start_date<=? AND b.end_date>=?
+                ORDER BY f.name
+            """, (selected["Through"], selected["From"])).fetchall()
+        clashes = [row for row in matches if row[0] == selected["Location"] and row[1] is not None]
+        if clashes:
+            for site, client, start_date, end_date in clashes:
+                st.warning(f"{site} overlaps with {client}'s booking from {start_date} through {end_date}.")
+        else:
+            st.success(f"{selected['Location']} is available for the entire campaign.")
+        alternatives = [name for name, client, _, _ in matches if client is None and name != selected["Location"]]
+        st.write("Other sites available for all requested dates")
+        st.write(", ".join(alternatives) or "None")
+        st.caption("Confirm location flexibility with the client before offering an alternative.")
+    leads.table(enquiries)
 st.divider()
 st.header("Compare booking decisions")
 with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True)) as db:
