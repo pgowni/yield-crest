@@ -140,6 +140,24 @@ def render():
     dataframe(comparisons,hide_index=True,use_container_width=True)
     if including and excluding:
         st.caption(mark(f"Including this campaign changes expected contribution by {money(including['expected']-excluding['expected'])}. Each row uses its financially best feasible allocation across the same boards; partner priority is applied to the recommended plan above."))
+    st.subheader("Why this plan?")
+    if including:
+        gap=including["expected"]-excluding["expected"]
+        preference="including" if gap>=0 else "excluding"
+        st.write(mark(f"At {probabilities[str(rid)]:.0%} confirmation chance and a reservation deadline of {result['hold_expiries'][str(rid)]}, the best plan including {req['client']} produces {money(including['expected'])}, versus {money(excluding['expected'])} without it. Financially, {preference} this campaign is better by {money(abs(gap))}. These are totals across the same connected boards, not single-board offers."))
+    else:st.write("This campaign cannot fit the current board, campaign-date and maintenance constraints.")
+    if result["tradeoff"]>0.01:
+        st.warning(mark(f"Strategic-partner priority changes the financially best plan. The recommended plan gives up {money(result['tradeoff'])} of expected contribution, within the {money(tolerance)} priority tolerance."))
+    else:st.caption("Strategic-partner priority does not reduce expected contribution in this recommendation.")
+    from yieldcrest.ui.plan_details import render_plan
+    with st.expander("Alternative plan · leave the selected campaign out",expanded=not bool(chosen["sites"])):
+        render_plan(excluding,names,face,target["start_date"],target["end_date"])
+    if including:
+        with st.expander("Comparison plan · include the selected campaign"):
+            render_plan(including,names,face,target["start_date"],target["end_date"])
+    if result["tradeoff"]>0.01:
+        with st.expander("Recommended plan · after strategic-partner policy"):
+            render_plan(recommended,names,face,target["start_date"],target["end_date"])
     st.markdown(mark("**Recommended board assignments**"))
     dataframe([{"Client":a["client"],"Board assignment":", ".join(a["sites"]) or "Not selected","Reserve until":result["hold_expiries"][str(a["request_id"]) ] if a["sites"] else "—"} for a in recommended["assignments"]],hide_index=True,use_container_width=True)
     st.caption(mark("These are proposed commitments, not confirmed bookings. Unselected requests are declined in this scenario; they are not assumed to wait for another request to fail."))

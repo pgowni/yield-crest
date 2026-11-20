@@ -40,6 +40,9 @@ def analyze_campaign(rid,face,shift,gross,probabilities,holds,tolerance,share):
             p=dict(plan)
             for key in ['expected','p10','p90','target_success','target_failure']:p[key]-=expense
             p['maintenance_schedule']=schedule
+            p['breakdown']={**plan['breakdown'],'maintenance_expense':expense,'total':p['expected'],
+                'boards':[{**b,'maintenance_expense':sum(j['cost'] for j in schedule if j['board_id']==b['board_id']),
+                    'expected':b['expected']-sum(j['cost'] for j in schedule if j['board_id']==b['board_id'])} for b in plan['breakdown']['boards']]}
             candidates.append(p)
     def includes(p):return bool(next(a for a in p['assignments'] if a['request_id']==rid)['sites'])
     def best(pool):return max(pool,key=lambda p:p['expected']) if pool else None

@@ -255,6 +255,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
             samples=[]
             weights=[]
             expectation=0.
+            face_expectations={f:0. for f in faces}
             p_success_partner=0.
             conditional={False:0.,True:0.}
             for outcome in itertools.product([False,True],repeat=len(requests)):
@@ -266,7 +267,9 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
                     indices=[i for i,assigned in enumerate(plan) if face in assigned]
                     locked=[requests[i] for i in indices]
                     successes=[outcome[i] for i in indices]
-                    totals+=face_revenue(face,locked,successes)
+                    face_values=face_revenue(face,locked,successes)
+                    totals+=face_values
+                    face_expectations[face]+=weight*float(np.mean(face_values))
                 mean_total=float(np.mean(totals))
                 expectation+=weight*mean_total
                 if target_request is not None:
@@ -283,10 +286,25 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
             quantile=lambda q:float(ordered[min(np.searchsorted(cumulative,q),len(ordered)-1)])
             labels=[{"request_id":r["id"],"client":r["client"],"sites":[db.execute("SELECT name FROM faces WHERE id=?",(f,)).fetchone()[0] for f in assigned]}
                     for r,assigned in zip(requests,plan)]
+            campaign_breakdown=[]
+            for r,assigned,p_close in zip(requests,plan,probability):
+                net=sum(gains[(r["id"],f)] for f in assigned)
+                campaign_breakdown.append({"request_id":r["id"],"client":r["client"],"board_ids":list(assigned),
+                    "start":r["start_date"],"end":r["end_date"],"proposed_price":r["gross"],
+                    "confirmation_probability":p_close,"net_if_confirmed":net,"expected_contribution":net*p_close,
+                    "reserve_until":releases[str(r["id"])] if assigned else None})
+            boards_breakdown=[]
+            for f in faces:
+                current=sum(gains[(r["id"],f)]*p_close for r,assigned,p_close in zip(requests,plan,probability) if f in assigned)
+                boards_breakdown.append({"board_id":f,"current_campaigns":current,
+                    "future_bookings":face_expectations[f]-current,"expected":face_expectations[f]})
+            breakdown={"campaigns":campaign_breakdown,"boards":boards_breakdown,
+                "current_campaigns":sum(r["expected_contribution"] for r in campaign_breakdown),
+                "future_bookings":sum(r["future_bookings"] for r in boards_breakdown),"maintenance_expense":0.,"total":expectation}
             plans.append({"expected":expectation,"p10":quantile(.1),"p90":quantile(.9),
                           "probability_zero":sum(w for v,w in zip(samples,weights) if v<=0),
                           "target_success":conditional[True],"target_failure":conditional[False],
-                          "assignments":labels,"partner":any(assigned and r["client_id"]==1 for r,assigned in zip(requests,plan)),"plan":plan})
+                          "breakdown":breakdown,"assignments":labels,"partner":any(assigned and r["client_id"]==1 for r,assigned in zip(requests,plan)),"plan":plan})
         if not plans:
             raise ValueError("No feasible plan including the service constraint.")
         plans.sort(key=lambda p:p["expected"],reverse=True)
