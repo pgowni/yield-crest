@@ -7,7 +7,7 @@ The demonstration is fixed at 19 November 2026 and plans through 31 December.
 
 | Folder | Contents |
 |---|---|
-| [yieldcrest](yieldcrest) | Calendar/finance domain logic, forecasting, booking decisions and Gemini tools |
+| [yieldcrest](yieldcrest) | Calendar/finance domain logic, forecasting, booking decisions |
 | [yieldcrest/ui](yieldcrest/ui) | Dashboard pages, shared components, floating chat and styles |
 | [data](data) | Persistent SQLite database and generator assumptions |
 | [data/splits](data/splits) | Exact training, validation, test, final-fit and replay CSV snapshots |
@@ -31,8 +31,7 @@ streamlit run streamlit_app.py
 
 The app opens [data/yieldcrest.sqlite](data/yieldcrest.sqlite) read-only and loads
 [artifacts/forecast.joblib](artifacts/forecast.joblib). User interactions neither
-regenerate data nor retrain models. Each browser session owns its what-if controls,
-connection settings and conversation.
+regenerate data nor retrain models. Each browser session owns its what-if controls.
 
 ## Reproduce the models
 
@@ -55,32 +54,7 @@ The one-time generator is `python -m scripts.generate_data`. It refuses to overw
 an existing database. Regeneration is an intentional offline action.
 Only load the trusted fitted artifact committed to this repository.
 
-## Assistant providers
-
-Add a server secret in Streamlit app settings:
-
-```toml
-GEMINI_API_KEY = "your Gemini key"
-OPENAI_API_KEY = "your OpenAI key"
-# Optional model overrides
-# GEMINI_MODEL = "your supported Gemini model ID"
-OPENAI_MODEL = "gpt-4.1-mini"
-```
-
-Keep keys out of GitHub. Personal session-only keys can be entered in the floating
-assistant's connection panel. Gemini is primary. On authentication, quota, unavailable-model,
-malformed-response or timeout failure, the same request is sent to OpenAI when its key is
-configured. OpenAI also works by itself. Gemini HTTP requests time out after 12 seconds.
-A successful primary response does not call the backup. The interface names the answering provider.
-
-Decision explanations show readable Python-generated paragraphs immediately.
-The optional Explain this decision with AI button calls the same provider router.
-Scenario details and recent conversation are sent only when a question or AI explanation
-is requested, to the provider used to answer. The assistant invokes bounded Python
-functions for calculations and cannot modify the database.
-
-Run provider-routing tests without credentials using
-`python -m unittest tests.test_llm`. Live OpenAI verification requires an owner-provided key.
+The application runs without LLM API keys. The floating assistant and AI explanation controls have been removed.
 
 ## Reviewer workflow
 

@@ -1,14 +1,10 @@
 from datetime import date
-import json
-import hashlib
 
 import pandas as pd
 import streamlit as st
 
 from yieldcrest.domain import AS_OF, connect
 from yieldcrest.explanations import explain_calendar
-from yieldcrest.llm import respond_with_fallback
-from yieldcrest.ui.connection import connection
 from yieldcrest.decision_engine import compare_calendar, joint_allocation, live_requests, maintenance_options, choose_service_allocation
 
 money=lambda value: f"₹{value:,.0f}"
@@ -149,18 +145,6 @@ def render():
     context={"calculation_workspace":"Decisions","settings":settings,"current_allocation":result,
              "selected_campaign":rid,"allocation_settings":{"target_request":rid,"target_face":face,"target_shift":shift,"target_gross":gross,"probabilities":probabilities,"hold_days_by_request":holds,"partner_tolerance":tolerance,"partner_share":share}}
     st.session_state.latest_context=context
-    with st.expander("Explain this decision"):
-        st.write("The model compares feasible assignments for the connected requests. Each selected request has its own confirmation probability and reservation deadline. It then simulates future business on the dates left open, including seasonal demand and campaign duration.")
-        st.caption("Close outcomes are assumed independent. Forecasts use synthetic history. All confirmation probabilities stay fixed when deadlines change unless you adjust them.")
-        config=connection()
-        signature=hashlib.sha256(json.dumps(context,sort_keys=True,default=str).encode()).hexdigest()
-        if st.button("Explain this decision with AI",disabled=not bool(config["gemini_key"] or config["openai_key"])):
-            try:
-                answer=respond_with_fallback("Explain the selected campaign decision and its connected competitors in plain language. Use the supplied allocation results. Do not substitute a firm-offer comparison or invent figures.",[],context,**config)
-                st.session_state.yc_campaign_explanation=(signature,answer)
-            except (RuntimeError,ValueError) as error:st.warning(str(error))
-        saved=st.session_state.get("yc_campaign_explanation")
-        if saved and saved[0]==signature:st.markdown(saved[1]["text"])
 
 
 @st.cache_data(show_spinner=False)

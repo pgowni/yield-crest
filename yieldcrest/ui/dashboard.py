@@ -134,5 +134,4 @@ def render():
             from yieldcrest.ui.operations import render as operations
             operations()
 
-    from yieldcrest.ui.chat_panel import render as render_chat_panel
-    render_chat_panel(section)
+
