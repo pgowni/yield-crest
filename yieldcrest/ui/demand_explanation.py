@@ -8,7 +8,7 @@ from yieldcrest.ui.partner_badge import dataframe
 def signals(face,start,end):return demand_drivers(face,start,end)
 
 
-def render(face,start,end):
+def render(face,start,end,mode="accept"):
     d=signals(face,start,end)
     if d['periods']:
         periods='; '.join(f"{p['start_date']} to {p['end_date']}" for p in d['periods'])
@@ -25,7 +25,12 @@ def render(face,start,end):
     if d['periods'] and abs(ratio-1)>.01:
         direction='higher' if ratio>1 else 'lower'
         st.write(f"For a booking of this length, the pricing model estimates festive daily rates about {abs(ratio-1):.0%} {direction} than other dates. That affects the value of keeping dates available, but does not mean a better-paying client will definitely arrive.")
-    st.write("The model weighs that possible future business against the offers already in hand and the time each board would be tied up. It also makes room for maintenance before its deadline.")
+    if mode in ['future','maintenance']:
+        st.write("Here, future business is part of the plan being recommended, rather than just an alternative to an accepted offer. Leaving dates open gives those enquiries a chance to fit; it also means you carry the risk of unsold days.")
+    elif mode=='competitor':
+        st.write("Here, another current client gets the overlapping dates. Future demand is considered on the dates still free, rather than replacing that client’s booking.")
+    else:
+        st.write("Here, the model chooses the current request despite the possible future business. Its expected value and the wider board assignments support taking it now; new enquiries can still use the dates left free.")
     with st.expander('History behind the forecast'):
         st.write(f"There are {d['evidence']['local_bookings']} accepted bookings for this board and {d['evidence']['pooled_bookings']} across all boards. About {d['local_weight']:.0%} of the booking examples used come from this board; the rest come from the wider business.")
         rows=[]
