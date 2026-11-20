@@ -4,7 +4,7 @@ from datetime import date
 import pandas as pd
 import streamlit as st
 
-from yieldcrest.domain import AS_OF, connect
+from yieldcrest.domain import AS_OF, HORIZON_END, connect
 from yieldcrest.explanations import explain_calendar
 from yieldcrest.decision_engine import compare_calendar, joint_allocation, live_requests, maintenance_options, choose_service_allocation
 
@@ -60,7 +60,14 @@ def render():
     a,b,c=st.columns(3)
     face=a.selectbox("Client-approved board",req["faces"],format_func=lambda f:mark(names[f]),key=f"face_{rid}")
     gross=b.number_input("Proposed price (₹)",min_value=0,max_value=1000000,step=1000,key=price_key)
-    shift=c.slider("Move campaign (days)",-5,10,0,key=f"shift_{rid}")
+    original_start=date.fromisoformat(req["start_date"])
+    duration=(date.fromisoformat(req["end_date"])-original_start).days+1
+    latest_start=HORIZON_END-timedelta(days=duration-1)
+    start=c.date_input("Campaign start date",value=original_start,min_value=AS_OF,max_value=latest_start,
+                       key=f"campaign_start_{rid}_{revision}",
+                       help="Choose the proposed start date. The campaign keeps its original duration; availability, competing requests and maintenance are recalculated.")
+    shift=(start-original_start).days
+    c.caption(f"Ends {(start+timedelta(days=duration-1)):%d %b %Y} · {duration} days")
     try:
         firm=calendar_result(rid,face,shift,gross,**settings)
     except ValueError as error:
