@@ -13,10 +13,11 @@ TOOLS=[
      "parameters":{"type":"OBJECT","properties":{"request_id":{"type":"INTEGER"},"face":{"type":"INTEGER"},
        "shift":{"type":"INTEGER"},"gross":{"type":"NUMBER"},"lit":{"type":"BOOLEAN"},"cash":{"type":"BOOLEAN"},
        "funding":{"type":"NUMBER"}},"required":["request_id","face"]}},
-    {"name":"joint_allocation","description":"Compare all three live requests jointly. Probability overrides use request IDs as strings; changing hold length keeps close probabilities fixed unless explicitly changed. Include partner priority and optional service dates.",
+    {"name":"joint_allocation","description":"Compare connected requests for the selected campaign when campaign context exists; otherwise compare the live portfolio. Probability overrides use request IDs as strings; changing hold length keeps close probabilities fixed unless explicitly changed. Include partner priority and optional service dates.",
      "parameters":{"type":"OBJECT","properties":{"hold_days":{"type":"INTEGER"},"partner_tolerance":{"type":"NUMBER"},
        "partner_share":{"type":"NUMBER"},"lit":{"type":"BOOLEAN"},"cash":{"type":"BOOLEAN"},"funding":{"type":"NUMBER"},
-       "probabilities":{"type":"OBJECT","properties":{"1":{"type":"NUMBER"},"2":{"type":"NUMBER"},"3":{"type":"NUMBER"}}}}}},
+       "probabilities":{"type":"OBJECT","properties":{"1":{"type":"NUMBER"},"2":{"type":"NUMBER"},"3":{"type":"NUMBER"}}},
+       "hold_days_by_request":{"type":"OBJECT","properties":{"1":{"type":"INTEGER"},"2":{"type":"INTEGER"},"3":{"type":"INTEGER"}}}}}},
     {"name":"maintenance_options","description":"Compute feasible service windows and expected displaced rental contribution.",
      "parameters":{"type":"OBJECT","properties":{"job_id":{"type":"INTEGER"},"lit":{"type":"BOOLEAN"},
         "cash":{"type":"BOOLEAN"},"funding":{"type":"NUMBER"}},"required":["job_id"]}}
@@ -84,6 +85,9 @@ def execute_tool(name,args,context):
     merged={k:v for k,v in defaults.items() if k in ["lit","cash","funding"]}
     if name=="joint_allocation":
         merged.update(context.get("allocation_settings",{}))
+        if "hold_days_by_request" in args:
+            args=dict(args)
+            args["hold_days_by_request"]={**merged.get("hold_days_by_request",{}),**args["hold_days_by_request"]}
         if "probabilities" in args:
             args=dict(args)
             args["probabilities"]={**merged.get("probabilities",{}),**args["probabilities"]}

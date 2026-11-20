@@ -161,8 +161,21 @@ def candidate_assignments(db, requests):
             yield plan
 
 
+def connected_requests(requests,target_id):
+    """Connected conflicts require both date overlap and a shared approved face."""
+    selected={target_id}
+    while True:
+        expanded=selected | {r["id"] for r in requests if any(
+            other["id"] in selected and set(r["faces"]) & set(other["faces"]) and
+            overlaps(r["start_date"],r["end_date"],other["start_date"],other["end_date"])
+            for other in requests)}
+        if expanded==selected:return [r for r in requests if r["id"] in selected]
+        selected=expanded
+
+
 def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partner_share=.8,
-                     lit=True, cash=False, funding=.12, maintenance=None):
+                     lit=True, cash=False, funding=.12, maintenance=None,
+                     target_request=None,target_face=None,target_shift=0,target_gross=None,hold_days_by_request=None):
     """Two-stage scenario evaluation with nonanticipative commitments.
     A skipped request is declined. Active waitlist requests, when present, are
     allocated jointly after hold outcomes become known, respecting their expiry.
@@ -181,10 +194,27 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
         for r in requests:
             if r["client_id"]==1:
                 r["share"]=partner_share
+        if target_request is not None:
+            target=next((r for r in requests if r["id"]==target_request),None)
+            if target is None:raise ValueError("Unknown campaign.")
+            if target_face not in target["faces"]:raise ValueError("Board is not client-approved.")
+            target["faces"]=[target_face]
+            for field in ["start_date","end_date"]:
+                target[field]=(date.fromisoformat(target[field])+timedelta(days=target_shift)).isoformat()
+            if target_gross is not None:
+                if not 0<=target_gross<=1000000:raise ValueError("Check proposed price.")
+                target["gross"]=target_gross
+            if target["start_date"]<str(AS_OF) or target["end_date"]>str(HORIZON_END):raise ValueError("Campaign must fit the planning period.")
+            requests=connected_requests(requests,target_request)
         faces=sorted({f for r in requests for f in r["faces"]})
-        release=(AS_OF+timedelta(days=hold_days)).isoformat()
-        if any(release>r["expires"] for r in requests):
-            raise ValueError("Hold expiry exceeds a client offer expiry.")
+        releases={}
+        for r in requests:
+            days_held=(hold_days_by_request or {}).get(str(r["id"]),hold_days)
+            if not isinstance(days_held,int) or not 0<=days_held<=5:raise ValueError("Each reservation must be between zero and five days.")
+            release=(AS_OF+timedelta(days=days_held)).isoformat()
+            if release>min(r["expires"],r["start_date"]):raise ValueError("Reservation cannot extend beyond offer expiry or campaign start.")
+            releases[str(r["id"])]=release
+        release=max(releases.values())
         probability=[float(probabilities.get(str(r["id"]),close_probability(db,r,r["faces"][0]))) for r in requests]
         if any(not 0<=p<=1 for p in probability):
             raise ValueError("Close probabilities must be between zero and one.")
@@ -211,7 +241,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
                         occupied.append((r["start_date"],r["end_date"]))
                         value+=gains[(r["id"],face)]
                 filtered=[e for e in events if not any(
-                    e["arrival"]<release and overlaps(e["start"],e["end"],r["start_date"],r["end_date"])
+                    e["arrival"]<releases[str(r["id"])] and overlaps(e["start"],e["end"],r["start_date"],r["end_date"])
                     for r in locked)]
                 value+=replay_future(filtered,occupied,costs[face],lit,AS_OF,cash,funding)
                 result.append(value)
@@ -249,7 +279,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
                     for r,assigned in zip(requests,plan)]
             plans.append({"expected":expectation,"p10":quantile(.1),"p90":quantile(.9),
                           "probability_zero":sum(w for v,w in zip(samples,weights) if v<=0),
-                          "assignments":labels,"partner":bool(plan[0]),"plan":plan})
+                          "assignments":labels,"partner":any(assigned and r["client_id"]==1 for r,assigned in zip(requests,plan)),"plan":plan})
         if not plans:
             raise ValueError("No feasible plan including the service constraint.")
         plans.sort(key=lambda p:p["expected"],reverse=True)
@@ -258,7 +288,10 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
         return {"recommended":preferred,"financial_best":financial,"tradeoff":round(financial["expected"]-preferred["expected"],2),
                 "best_including":{str(r["id"]):next((p for p in plans if p["plan"][i]),None) for i,r in enumerate(requests)},
                 "top_plans":plans[:8],"probabilities":dict(zip([str(r["id"]) for r in requests],probability)),
-                "hold_expiry":release,"policy":"Prefer a Meridian Ads allocation within the operator's contribution tolerance.",
+                "hold_expiry":release,"hold_expiries":releases,
+                "included_request_ids":[r["id"] for r in requests],
+                "best_excluding":{str(r["id"]):next((p for p in plans if not p["plan"][i]),None) for i,r in enumerate(requests)},
+                "policy":"Prefer a Meridian Ads allocation within the operator's contribution tolerance.",
                 "model_scope":"Skipped requests are declined. Failed holds release their exact faces to subsequent simulated enquiries. No client is assumed to wait past expiry.",
                 "assumptions":["Close outcomes assumed independent; the same close probability is held when changing hold length unless overridden.",
                                "Future arrivals follow an online first-feasible booking policy; this is a policy comparison, not perfect-foresight revenue.",
