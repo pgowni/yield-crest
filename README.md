@@ -6,7 +6,7 @@ It combines inventory, campaign enquiries, booking history, payment records, sea
 
 Machine-learning models estimate future enquiry volumes, offer-confirmation probabilities, and achievable rental rates. A simulation and allocation engine compares feasible plans, accounting for revenue shares, operating costs, maintenance downtime, and opportunities displaced by accepting a campaign.
 
-For example, Lotus Retail requests Ameerpet for ₹43,000. Meridian Ads offers ₹65,000 for overlapping dates but also accepts Banjara Hills. Ameerpet needs maintenance. The system evaluates confirmation chances, alternative boards, seasonal demand, and maintenance windows. It might recommend Lotus on Ameerpet, Meridian on Banjara Hills, and maintenance after Lotus’s campaign.
+For example, Lotus Retail requests Ameerpet location for ₹43,000. Meridian Ads offers ₹65,000 for overlapping dates but also accepts Banjara Hills location. Ameerpet needs maintenance. The system evaluates confirmation chances, alternative boards, seasonal demand, and maintenance windows. It might recommend Lotus on Ameerpet, Meridian on Banjara Hills, and maintenance after Lotus’s campaign.
 
 Users see recommended assignments, expected net contribution, uncertainty ranges, and the confirmation probability at which the preferred decision changes. Adjusting prices, dates, or probabilities recalculates the comparison.
 
