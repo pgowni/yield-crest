@@ -64,9 +64,7 @@ def render():
             st.session_state[price_key]=int(req["gross"])
         a,b,c=st.columns([1,1,1])
         face=a.selectbox("Client-approved board",req["faces"],format_func=lambda i:names[i],key=f"face_{rid}")
-        st.caption("Each option identifies an individual board and its physical format. A different board or format requires client approval; the current demo has one board per location.")
         gross=b.number_input("Proposed price (₹)",min_value=0,max_value=1000000,step=1000,key=price_key)
-        b.caption(f"Recorded campaign price: {money(req["gross"])}. Edits here apply only to this scenario.")
         shift=c.slider("Move campaign (days)",-5,10,0,key=f"shift_{rid}")
         try:
             result=calendar_result(rid,face,shift,gross,**settings)
@@ -74,7 +72,6 @@ def render():
             st.warning(str(error))
             return
         context["current_calendar"]=result
-        st.caption(f"{result['request']['start_date']} to {result['request']['end_date']} · Firm-offer comparison · Identical future demand in both calendars")
         a,b,c=st.columns(3)
         a.metric("Break-even proposed price",money(result["break_even_gross"]), help='Proposed gross price at which accepting and preserving the dates have equal expected contribution, under the selected cost settings.')
         b.metric("Expected advantage of accepting",money(result["difference"]), help='Expected net contribution with this firm offer minus expected contribution from keeping the dates available. Positive favors accepting; negative favors waiting.')
@@ -87,8 +84,6 @@ def render():
             if column != "Choice":
                 display_view[column]=display_view[column].map(money)
         st.dataframe(display_view,hide_index=True,use_container_width=True)
-        st.caption("The lower outcome has 10% of simulations below it; the upper outcome has 10% above it. Together they show the middle 80% of simulated outcomes, not a guaranteed range.")
-        st.caption(f"Showing {req['label']} · {names[face]} · Proposed price {money(gross)} · Date shift {shift:+d} days. Refreshing with identical inputs produces identical forecasts.")
         with st.expander("Compare with dates five days earlier"):
             try:
                 shifted=calendar_result(rid,face,shift-5,gross,**settings)

@@ -5,7 +5,7 @@ st.set_page_config(page_title="YieldCrest · Portfolio", layout="wide")
 from yieldcrest.ui import dashboard
 
 # Refresh imported modules once per deployed release, including existing sessions.
-_RELEASE = "maintenance-comparison-2026-11-20-v2"
+_RELEASE = "decisions-cleanup-2026-11-20-v3"
 if getattr(dashboard, "_loaded_release", None) != _RELEASE:
     from yieldcrest import decision_engine
     from yieldcrest.ui import decisions, operations, chat_panel
