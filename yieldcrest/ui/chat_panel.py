@@ -27,7 +27,7 @@ def workspace_context(section):
     has_previous_calculation = bool(context)
     context["active_workspace"] = section
     context["as_of"] = AS_OF.isoformat()
-    context["last_calculation_workspace"] = "Decisions" if has_previous_calculation else None
+    context["last_calculation_workspace"] = context.get("calculation_workspace","Decisions") if has_previous_calculation else None
     with connect() as db:
         requests = live_requests(db)
         context["request_ids"] = [

@@ -256,6 +256,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
         financial=plans[0]
         preferred=next((p for p in plans if p["partner"] and financial["expected"]-p["expected"]<=partner_tolerance),financial)
         return {"recommended":preferred,"financial_best":financial,"tradeoff":round(financial["expected"]-preferred["expected"],2),
+                "best_including":{str(r["id"]):next((p for p in plans if p["plan"][i]),None) for i,r in enumerate(requests)},
                 "top_plans":plans[:8],"probabilities":dict(zip([str(r["id"]) for r in requests],probability)),
                 "hold_expiry":release,"policy":"Prefer a Meridian Ads allocation within the operator's contribution tolerance.",
                 "model_scope":"Skipped requests are declined. Failed holds release their exact faces to subsequent simulated enquiries. No client is assumed to wait past expiry.",
