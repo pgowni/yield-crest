@@ -76,8 +76,11 @@ def render():
         view=pd.DataFrame([
             {"Choice":"Accept this firm offer","Expected net":result["accept"]["expected"],"Lower outcome (10th percentile)":result["accept"]["p10"],"Upper outcome (90th percentile)":result["accept"]["p90"]},
             {"Choice":"Keep the dates available","Expected net":result["wait"]["expected"],"Lower outcome (10th percentile)":result["wait"]["p10"],"Upper outcome (90th percentile)":result["wait"]["p90"]}])
-        st.bar_chart(view.set_index("Choice")[["Expected net"]],color="#397e79",horizontal=True)
-        st.dataframe(view,hide_index=True,use_container_width=True)
+        display_view=view.copy()
+        for column in display_view.columns:
+            if column != "Choice":
+                display_view[column]=display_view[column].map(money)
+        st.dataframe(display_view,hide_index=True,use_container_width=True)
         st.caption("The lower outcome has 10% of simulations below it; the upper outcome has 10% above it. Together they show the middle 80% of simulated outcomes, not a guaranteed range.")
         st.caption(f"Showing {req['label']} · {names[face]} · Proposed price {money(gross)} · Date shift {shift:+d} days. Refreshing with identical inputs produces identical forecasts.")
         with st.expander("Compare with dates five days earlier"):
