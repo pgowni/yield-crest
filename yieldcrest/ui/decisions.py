@@ -142,8 +142,22 @@ def render():
     if including and excluding:
         st.caption(mark(f"Including this campaign changes expected contribution by {money(including['expected']-excluding['expected'])}. Each row uses its financially best feasible allocation across the same boards; partner priority is applied to the recommended plan above."))
     st.subheader("Why this plan?")
-    for paragraph in story['paragraphs']:
-        st.write(mark(paragraph))
+    with st.container(border=True):
+        st.markdown("#### Recommendation")
+        st.write(mark(story['paragraphs'][0]))
+        st.markdown("#### Financial comparison")
+        dataframe([{"Choice":"Include this request","Expected earnings after costs":money(including['expected']) if including else "Cannot fit"},
+                   {"Choice":"Keep this request out","Expected earnings after costs":money(excluding['expected'])},
+                   {"Choice":"Difference from including it","Expected earnings after costs":money(including['expected']-excluding['expected']) if including else "—"}],hide_index=True,use_container_width=True)
+        st.caption("Totals cover the same connected boards, including other requests, future bookings and maintenance.")
+        if len(story['paragraphs'])>1:
+            st.markdown("- "+mark(story['paragraphs'][1]))
+        if story['mode'] in ['future','maintenance'] and len(story['paragraphs'])>2:
+            st.markdown("#### Value of keeping dates open")
+            st.write(mark(story['paragraphs'][2]))
+        if result['tradeoff']>0.01:
+            st.markdown("#### Strategic-partner policy")
+            st.write(mark(story['paragraphs'][-1]))
     from yieldcrest.ui.demand_explanation import render as render_demand
     render_demand(face,target['start_date'],target['end_date'],story['mode'])
     st.caption("We assume clients confirm independently. Extending a reservation does not increase their confirmation chance unless you change it. This is a demo using made-up records; no bookings are made automatically.")
