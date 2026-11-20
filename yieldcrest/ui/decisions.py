@@ -149,6 +149,8 @@ def render():
     if result["tradeoff"]>0.01:
         st.warning(mark(f"Strategic-partner priority changes the financially best plan. The recommended plan gives up {money(result['tradeoff'])} of expected contribution, within the {money(tolerance)} priority tolerance."))
     else:st.caption("Strategic-partner priority does not reduce expected contribution in this recommendation.")
+    from yieldcrest.ui.demand_explanation import render as render_demand
+    render_demand(face,target["start_date"],target["end_date"])
     from yieldcrest.ui.plan_details import render_plan
     with st.expander("Alternative plan · leave the selected campaign out",expanded=not bool(chosen["sites"])):
         render_plan(excluding,names,face,target["start_date"],target["end_date"])
