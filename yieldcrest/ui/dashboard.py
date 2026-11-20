@@ -37,6 +37,7 @@ def site_calendar(db):
 
 
 def render():
+    st.session_state["partner_badge_visible"]=False
     header()
     st.session_state.setdefault("page","Overview")
     if st.session_state.page not in PAGES:
@@ -44,6 +45,7 @@ def render():
     section=navigation(PAGES)
     st.title("Portfolio overview" if section=="Overview" else section)
     st.caption(mark("19 November 2026 · Synthetic demonstration · Planning through 31 December"))
+    partner_legend=st.empty()
     with connect() as db:
         sites=site_calendar(db)
         requests=live_requests(db)
@@ -136,3 +138,5 @@ def render():
             operations()
 
 
+    if st.session_state.get("partner_badge_visible"):
+        partner_legend.caption("SP — Strategic partner")

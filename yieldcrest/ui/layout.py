@@ -6,7 +6,6 @@ def header():
     st.html('<header class="yc-mast"><div class="yc-name"><span class="yc-mark">◩</span>YieldCrest</div><div class="yc-context">AdPlay &nbsp; / &nbsp; Hyderabad</div></header>')
 
 def navigation(pages):
-    st.html('<div style="font-size:12px;color:#536a70;text-align:right"><span title="Strategic partner: an agency with an explicit priority policy" aria-label="Strategic partner">ˢᴾ Strategic partner</span></div>')
     for col, page in zip(st.columns(len(pages)), pages):
         col.button(page, key=f"nav_{page}", type="primary" if st.session_state.page == page else "secondary",
                    use_container_width=True, on_click=navigate, args=(page,))

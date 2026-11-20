@@ -93,8 +93,8 @@ def render():
     if excluded:st.caption(mark("Outside this comparison: "+", ".join(excluded)+" — no connected date-and-board conflict."))
     with st.expander(mark("Strategic partner policy")):
         a,b=st.columns(2)
-        tolerance=a.number_input("Meridian Adsˢᴾ priority tolerance (₹)",0,100000,5000,step=1000)
-        share=b.number_input("AdPlay share of Meridian Adsˢᴾ bill (%)",1.,100.,80.,step=1.)/100
+        tolerance=a.number_input("Meridian Ads [SP] priority tolerance (₹)",0,100000,5000,step=1000)
+        share=b.number_input("AdPlay share of Meridian Ads [SP] bill (%)",1.,100.,80.,step=1.)/100
     with st.spinner("Comparing this campaign with connected requests and future demand…"):
         result=campaign_result(rid,face,shift,gross,probabilities,holds,tolerance,share)
     including=result["best_including"][str(rid)]
