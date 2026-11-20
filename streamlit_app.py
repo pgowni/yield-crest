@@ -5,7 +5,7 @@ st.set_page_config(page_title="YieldCrest · Portfolio", layout="wide")
 from yieldcrest.ui import dashboard
 
 # Refresh imported modules once per deployed release, including existing sessions.
-_RELEASE = "campaign-workspace-2026-11-20-v15-demand-explanation"
+_RELEASE = "campaign-workspace-2026-11-20-v16-plain-decision-reasons"
 if getattr(dashboard, "_loaded_release", None) != _RELEASE:
     from yieldcrest import decision_engine, campaign_analysis, demand_drivers
     from yieldcrest.ui import decisions, layout, partner_badge, plan_details, demand_explanation

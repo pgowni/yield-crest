@@ -141,25 +141,29 @@ def render():
     if including and excluding:
         st.caption(mark(f"Including this campaign changes expected contribution by {money(including['expected']-excluding['expected'])}. Each row uses its financially best feasible allocation across the same boards; partner priority is applied to the recommended plan above."))
     st.subheader("Why this plan?")
+    chance=probabilities[str(rid)]
+    deadline=result['hold_expiries'][str(rid)]
     if including:
-        gap=including["expected"]-excluding["expected"]
-        preference="including" if gap>=0 else "excluding"
-        st.write(mark(f"At {probabilities[str(rid)]:.0%} confirmation chance and a reservation deadline of {result['hold_expiries'][str(rid)]}, the best plan including {req['client']} produces {money(including['expected'])}, versus {money(excluding['expected'])} without it. Financially, {preference} this campaign is better by {money(abs(gap))}. These are totals across the same connected boards, not single-board offers."))
-    else:st.write("This campaign cannot fit the current board, campaign-date and maintenance constraints.")
-    if result["tradeoff"]>0.01:
-        st.warning(mark(f"Strategic-partner priority changes the financially best plan. The recommended plan gives up {money(result['tradeoff'])} of expected contribution, within the {money(tolerance)} priority tolerance."))
-    else:st.caption("Strategic-partner priority does not reduce expected contribution in this recommendation.")
+        gap=including['expected']-excluding['expected']
+        if chosen['sites']:
+            st.write(mark(f"Book {req['client']} on {', '.join(chosen['sites'])} if they confirm. You have set their chance of confirming to {chance:.0%}, with a decision due by {deadline}."))
+        else:
+            st.write(mark(f"At the current {chance:.0%} chance of confirmation, the recommended plan does not reserve this board for {req['client']} until {deadline}."))
+        action="Taking this request" if gap>=0 else "Keeping this request out"
+        st.write(f"{action} leaves the business about {money(abs(gap))} better off on average across the boards being considered, after costs and maintenance. This includes money from the other requests and possible future bookings.")
+        alternative=result['best_excluding'][str(rid)]
+        occupants=[r for r in alternative['breakdown']['campaigns'] if face in r['board_ids'] and not (r['end']<target['start_date'] or r['start']>target['end_date'])]
+        if occupants:
+            st.write(mark("If you do not take this request, this board would instead be offered to "+", ".join(r['client'] for r in occupants)+" for the overlapping dates, subject to their confirmation."))
+        else:
+            st.write("If you do not take this request, no other current client is assigned to this board for those dates. It stays available for new enquiries, around any maintenance. Future bookings are possible, not guaranteed.")
+    else:
+        st.write("This request cannot fit the selected board and dates alongside the existing bookings and required maintenance. Try another approved board or start date.")
+    if result['tradeoff']>0.01:
+        st.write(mark(f"Meridian Ads is a strategic partner. Giving them priority changes the choice and gives up about {money(result['tradeoff'])} in expected earnings. That is within the {money(tolerance)} limit you set."))
     from yieldcrest.ui.demand_explanation import render as render_demand
-    render_demand(face,target["start_date"],target["end_date"])
-    from yieldcrest.ui.plan_details import render_plan
-    with st.expander("Alternative plan · leave the selected campaign out",expanded=not bool(chosen["sites"])):
-        render_plan(excluding,names,face,target["start_date"],target["end_date"])
-    if including:
-        with st.expander("Comparison plan · include the selected campaign"):
-            render_plan(including,names,face,target["start_date"],target["end_date"])
-    if result["tradeoff"]>0.01:
-        with st.expander("Recommended plan · after strategic-partner policy"):
-            render_plan(recommended,names,face,target["start_date"],target["end_date"])
+    render_demand(face,target['start_date'],target['end_date'])
+    st.caption("We assume clients confirm independently. Extending a reservation does not increase their confirmation chance unless you change it. This is a demo using made-up records; no bookings are made automatically.")
     st.markdown(mark("**Recommended board assignments**"))
     dataframe([{"Client":a["client"],"Board assignment":", ".join(a["sites"]) or "Not selected","Reserve until":result["hold_expiries"][str(a["request_id"]) ] if a["sites"] else "—"} for a in recommended["assignments"]],hide_index=True,use_container_width=True)
     st.caption(mark("These are proposed commitments, not confirmed bookings. Unselected requests are declined in this scenario; they are not assumed to wait for another request to fail."))

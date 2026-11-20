@@ -10,25 +10,28 @@ def signals(face,start,end):return demand_drivers(face,start,end)
 
 def render(face,start,end):
     d=signals(face,start,end)
-    st.markdown('**What demand assumptions are behind the future-booking value?**')
     if d['periods']:
-        labels='; '.join(f"{p['label']} ({p['start_date']} to {p['end_date']})" for p in d['periods'])
-        st.write('The selected campaign overlaps '+labels+'. Reserving these dates can prevent a future campaign that needs the same consecutive dates.')
+        periods='; '.join(f"{p['start_date']} to {p['end_date']}" for p in d['periods'])
+        st.write(f"These dates overlap the demo’s festive selling period ({periods}). Accepting this campaign uses dates that another festive campaign might need.")
     else:
-        st.write('The selected campaign does not overlap a recorded festive period. A festival should not be presented as the reason for this decision.')
+        st.write("These dates do not overlap a festive period in the demo calendar.")
     actual=d['expected_enquiries'];off=d['enquiries_without_festive_indicator']
-    change=(actual/off-1)*100 if off else 0
-    direction='higher' if change>0 else 'lower' if change<0 else 'unchanged'
-    st.write(f"For this board, the enquiry model expects {actual:.2f} new enquiries through {HORIZON_END:%d %b %Y}. Keeping the board and calendar-month inputs fixed but switching off the festive-sales indicator gives {off:.2f}. The fitted festive signal makes the enquiry estimate {abs(change):.1f}% {direction}. This is a model-feature comparison, not a measured revenue uplift.")
+    if off and abs(actual/off-1)>.01:
+        verb='raises' if actual>off else 'lowers'
+        st.write(f"The forecast suggests about {actual:.1f} new enquiries for this board by {HORIZON_END:%d %B}, including enquiries for other dates. The seasonal pattern in the demo history {verb} this estimate from {off:.1f}.")
+    else:
+        st.write(f"The forecast suggests about {actual:.1f} new enquiries for this board by {HORIZON_END:%d %B}. The festive pattern makes little difference to this estimate.")
     ratio=d['price_festive_ratio']
-    st.write(f"For the same board and campaign duration, the achieved-rate model estimates a festive-to-other-date rental-rate ratio of {ratio:.2f}×. The simulation adjusts historical rate-and-duration pairs using this model; it does not assume every festive booking pays more.")
-    st.write(f"Across the shared simulations, an average of {d['overlapping_candidates_per_path']:.2f} future booking candidates per scenario overlap these campaign dates; {d['festive_candidates_per_path']:.2f} overlap a festive period. Candidates have passed the simulated confirmation draw, but may still fail to fit existing bookings, maintenance or other accepted campaigns. Their value is not guaranteed income.")
-    st.caption(f"Rate/duration evidence: {d['evidence']['local_bookings']} accepted bookings on this board and {d['evidence']['pooled_bookings']} portfolio bookings. Local history supplies {d['local_weight']:.0%} of template draws; the rest is pooled. History spans {len(d['historical_periods'])} recorded seasonal episodes. These observations share seasonal conditions and are not independent.")
-    with st.expander('Inspect the historical demand and pricing evidence'):
+    if d['periods'] and abs(ratio-1)>.01:
+        direction='higher' if ratio>1 else 'lower'
+        st.write(f"For a booking of this length, the pricing model estimates festive daily rates about {abs(ratio-1):.0%} {direction} than other dates. That affects the value of keeping dates available, but does not mean a better-paying client will definitely arrive.")
+    st.write("The model weighs that possible future business against the offers already in hand and the time each board would be tied up. It also makes room for maintenance before its deadline.")
+    with st.expander('History behind the forecast'):
+        st.write(f"There are {d['evidence']['local_bookings']} accepted bookings for this board and {d['evidence']['pooled_bookings']} across all boards. About {d['local_weight']:.0%} of the booking examples used come from this board; the rest come from the wider business.")
         rows=[]
         for r in d['history']:
-            rows.append({**r,'Average achieved daily rent':f"₹{r['Average achieved daily rent']:,.0f}" if r['Average achieved daily rent'] is not None else 'No samples',
-                         'Average campaign days':round(r['Average campaign days'],1) if r['Average campaign days'] is not None else 'No samples'})
+            rows.append({'History':r['Group'],'Dates':r['Campaign period'],'Bookings':r['Accepted bookings'],
+                         'Average daily rent':f"₹{r['Average achieved daily rent']:,.0f}" if r['Average achieved daily rent'] is not None else 'No records',
+                         'Average booking length (days)':round(r['Average campaign days'],1) if r['Average campaign days'] is not None else 'No records'})
         dataframe(rows,hide_index=True,use_container_width=True)
-        st.caption('Descriptive achieved rates from accepted offers only. These do not measure prices of rejected or unlogged opportunities. The model also uses board identity and calendar-month features; future campaigns preserve sampled lead-time, duration and rate pairings.')
-    st.caption('All records and seasonal periods are synthetic, including the illustrative December festive window. These signals explain the forecast inputs; the include-versus-exclude calculation determines the actual decision. This panel does not claim that seasonality alone caused the recommendation.')
+        st.caption('These are made-up demo records. Prices come from accepted offers only. Several bookings can share the same seasonal conditions, so they are not separate proof that the forecast is accurate.')
