@@ -155,20 +155,6 @@ def render():
             contribution_rows.append({"Client":request["client"],"Proposed price":money(request["gross"]),"Chance of confirmation":f"{probabilities[str(request['id'])]:.0%}","Net if confirmed":money(net) if assigned else "Not selected","Expected campaign contribution":money(net*probabilities[str(request['id'])])})
     dataframe(contribution_rows,hide_index=True,use_container_width=True)
     st.caption(mark("Campaign contribution excludes future bookings and maintenance expense, which are included in the plan totals above. Unselected requests contribute zero to this plan."))
-    with st.expander(mark("What if this client confirms now?")):
-        confirmed_probabilities={**probabilities,str(rid):1.0}
-        confirmed_holds={**holds,str(rid):0}
-        confirmed=campaign_result(rid,face,shift,gross,confirmed_probabilities,confirmed_holds,tolerance,share)
-        accept=confirmed["best_including"][str(rid)]
-        wait=confirmed["best_excluding"][str(rid)]
-        st.caption(mark("Only this client is set to 100% confirmation with no reservation delay. Competitors retain the probabilities and deadlines above. Maintenance and future demand are recalculated in both plans."))
-        if accept:
-            st.metric("Expected advantage of accepting now",money(accept["expected"]-wait["expected"]),help="Expected contribution with this campaign confirmed now minus the best plan without it, across the same boards and including maintenance expense.")
-            dataframe([{"Plan":label,"Expected contribution":money(plan["expected"]),"Lower simulated outcome":money(plan["p10"]),"Upper simulated outcome":money(plan["p90"])} for label,plan in [("Accept confirmed campaign now",accept),("Leave this campaign out",wait)]],hide_index=True,use_container_width=True)
-            st.markdown("**Assignments if accepted now**")
-            dataframe([{"Client":item["client"],"Board assignment":", ".join(item["sites"]) or "Not selected"} for item in accept["assignments"]],hide_index=True,use_container_width=True)
-        else:
-            st.warning("This campaign cannot fit the current board and maintenance constraints, even with confirmation guaranteed.")
     context={"calculation_workspace":"Decisions","settings":settings,"current_allocation":result,
              "selected_campaign":rid,"allocation_settings":{"target_request":rid,"target_face":face,"target_shift":shift,"target_gross":gross,"probabilities":probabilities,"hold_days_by_request":holds,"partner_tolerance":tolerance,"partner_share":share}}
     st.session_state.latest_context=context

@@ -10,7 +10,7 @@ from yieldcrest.domain import AS_OF,HORIZON_END,ROOT,connect,days,overlaps
 from yieldcrest.decision_engine import live_requests,existing_blocks,clear,payment_profile,future_values
 from yieldcrest.ui.layout import header,navigate,navigation,occupancy
 
-PAGES=["Overview","Inventory","Enquiries","Decisions","Operations"]
+PAGES=["Overview","Inventory","Enquiries","Decisions"]
 money=lambda x:f"₹{x:,.0f}"
 
 
@@ -133,9 +133,7 @@ def render():
         elif section=="Decisions":
             from yieldcrest.ui.decisions import render as decisions
             decisions()
-        elif section=="Operations":
-            from yieldcrest.ui.operations import render as operations
-            operations()
+
 
 
     if st.session_state.get("partner_badge_visible"):
