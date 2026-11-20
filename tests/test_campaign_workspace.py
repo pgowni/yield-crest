@@ -22,4 +22,12 @@ class CampaignTests(unittest.TestCase):
     def test_invalid_individual_deadline(self):
         with self.assertRaises(ValueError):joint_allocation(hold_days_by_request={'2':6})
 
+
+    def test_individual_deadlines_and_conditional_value(self):
+        result=joint_allocation(target_request=2,target_face=1,target_gross=43000,
+            probabilities={'1':.8,'2':.4,'3':.6},hold_days_by_request={'1':3,'2':1,'3':2})
+        self.assertEqual(result['hold_expiries'],{'1':'2026-11-22','2':'2026-11-20','3':'2026-11-21'})
+        for plan in result['all_plans']:
+            self.assertAlmostEqual(plan['expected'],.4*plan['target_success']+.6*plan['target_failure'],places=6)
+
 if __name__=='__main__':unittest.main()

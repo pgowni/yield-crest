@@ -256,9 +256,10 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
             weights=[]
             expectation=0.
             p_success_partner=0.
+            conditional={False:0.,True:0.}
             for outcome in itertools.product([False,True],repeat=len(requests)):
                 weight=math.prod(p if ok else 1-p for p,ok in zip(probability,outcome))
-                if weight==0:
+                if weight==0 and target_request is None:
                     continue
                 totals=np.zeros(SCENARIOS)
                 for face in faces:
@@ -266,7 +267,12 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
                     locked=[requests[i] for i in indices]
                     successes=[outcome[i] for i in indices]
                     totals+=face_revenue(face,locked,successes)
-                expectation+=weight*float(np.mean(totals))
+                mean_total=float(np.mean(totals))
+                expectation+=weight*mean_total
+                if target_request is not None:
+                    ti=next(i for i,r in enumerate(requests) if r["id"]==target_request)
+                    other_weight=math.prod(p if ok else 1-p for i,(p,ok) in enumerate(zip(probability,outcome)) if i!=ti)
+                    conditional[outcome[ti]]+=other_weight*mean_total
                 samples.extend(totals.tolist())
                 weights.extend([weight/SCENARIOS]*SCENARIOS)
                 if plan[0] and outcome[0]:
@@ -279,6 +285,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
                     for r,assigned in zip(requests,plan)]
             plans.append({"expected":expectation,"p10":quantile(.1),"p90":quantile(.9),
                           "probability_zero":sum(w for v,w in zip(samples,weights) if v<=0),
+                          "target_success":conditional[True],"target_failure":conditional[False],
                           "assignments":labels,"partner":any(assigned and r["client_id"]==1 for r,assigned in zip(requests,plan)),"plan":plan})
         if not plans:
             raise ValueError("No feasible plan including the service constraint.")
@@ -286,6 +293,7 @@ def joint_allocation(hold_days=3, probabilities=None, partner_tolerance=0, partn
         financial=plans[0]
         preferred=next((p for p in plans if p["partner"] and financial["expected"]-p["expected"]<=partner_tolerance),financial)
         return {"recommended":preferred,"financial_best":financial,"tradeoff":round(financial["expected"]-preferred["expected"],2),
+                "all_plans":plans if target_request is not None else [],
                 "best_including":{str(r["id"]):next((p for p in plans if p["plan"][i]),None) for i,r in enumerate(requests)},
                 "top_plans":plans[:8],"probabilities":dict(zip([str(r["id"]) for r in requests],probability)),
                 "hold_expiry":release,"hold_expiries":releases,

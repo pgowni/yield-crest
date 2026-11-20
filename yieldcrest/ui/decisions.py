@@ -107,9 +107,19 @@ def render():
     st.subheader("Campaign decision")
     if chosen["sites"]:st.success(f"Proposed plan includes {req['client']} on "+", ".join(chosen["sites"])+".")
     else:st.info(f"Proposed plan leaves out {req['client']} and preserves its dates for competing requests or future business.")
-    a,b=st.columns(2)
-    a.metric("Expected contribution · recommended plan",money(recommended["expected"]),help="Expected contribution across the boards in this connected comparison, including uncertain current requests, future bookings and modeled costs. Not just the selected client's rent.")
-    b.metric("Partner-policy trade-off",money(result["tradeoff"]),help="Expected contribution given up versus the financially best plan to apply the Meridian Ads priority tolerance.")
+    st.markdown("**Maintenance included in this decision**")
+    schedule=recommended.get("maintenance_schedule",[])
+    if schedule:
+        st.dataframe([{"Board":names[j["board_id"]],"Work":j["task"],"Closed from":j["start"],"Closed through":j["end"],"Expense":money(j["cost"])} for j in schedule],hide_index=True,use_container_width=True)
+        st.caption(result["maintenance_scope"])
+    else:st.caption("No pending maintenance job overlaps the boards and campaign windows in this comparison.")
+    a,b,c=st.columns(3)
+    a.metric("Proposed price",money(gross))
+    b.metric("Expected advantage of including campaign",money(including["expected"]-excluding["expected"]) if including else "Cannot fit",help="Best expected contribution including this campaign minus the best excluding it. Includes connected competitors, confirmation chances, future demand and maintenance expense.")
+    switches=result.get("chance_switches",[])
+    threshold="; ".join(f"{x['from']}–{x['to']}%" for x in switches) if switches else ("Cannot fit" if not including else "Always favors inclusion" if all(x["advantage"]>=0 for x in result["chance_sweep"]) else "Never favors inclusion")
+    c.metric("Confirmation chance · break-even",threshold,help="Where the financially preferred plan switches in a 1-percentage-point sensitivity sweep. Other probabilities stay fixed. Partner priority can change the recommendation.")
+    st.metric("Expected contribution · recommended plan",money(recommended["expected"]),help="Contribution across the same connected boards, including uncertain offers, future business and maintenance expense.")
     comparisons=[]
     for label,plan in [("Include this campaign",including),("Leave this campaign out",excluding)]:
         if plan:
@@ -120,6 +130,18 @@ def render():
     st.markdown("**Recommended board assignments**")
     st.dataframe([{"Client":a["client"],"Board assignment":", ".join(a["sites"]) or "Not selected","Reserve until":result["hold_expiries"][str(a["request_id"]) ] if a["sites"] else "—"} for a in recommended["assignments"]],hide_index=True,use_container_width=True)
     st.caption("These are proposed commitments, not confirmed bookings. Unselected requests are declined in this scenario; they are not assumed to wait for another request to fail.")
+    st.markdown("**Expected value of each request in the recommended allocation**")
+    from yieldcrest.decision_engine import request_net
+    with connect() as db:
+        contribution_rows=[]
+        for item in recommended["assignments"]:
+            request=dict(next(r for r in relevant if r["id"]==item["request_id"]))
+            if request["client_id"]==1:request["share"]=share
+            assigned=[f for f in request["faces"] if names[f].split(" · ")[1] in item["sites"]]
+            net=sum(request_net(db,request,f)/request["quantity"] for f in assigned)
+            contribution_rows.append({"Client":request["client"],"Proposed price":money(request["gross"]),"Chance of confirmation":f"{probabilities[str(request['id'])]:.0%}","Net if confirmed":money(net) if assigned else "Not selected","Expected campaign contribution":money(net*probabilities[str(request['id'])])})
+    st.dataframe(contribution_rows,hide_index=True,use_container_width=True)
+    st.caption("Campaign contribution excludes future bookings and maintenance expense, which are included in the plan totals above. Unselected requests contribute zero to this plan.")
     with st.expander("If this campaign were already confirmed"):
         st.caption("This separate reference assumes 100% confirmation and compares with future demand only. The main comparison above includes current competitors and their individual close chances.")
         st.metric("Break-even proposed price · confirmed offer",money(firm["break_even_gross"]),help="Threshold against simulated future demand only. It does not include the opportunity cost of the other current requests.")
@@ -143,6 +165,5 @@ def render():
 
 @st.cache_data(show_spinner=False)
 def campaign_result(rid,face,shift,gross,probabilities,holds,tolerance,share):
-    return joint_allocation(probabilities=probabilities,partner_tolerance=tolerance,partner_share=share,
-                            target_request=rid,target_face=face,target_shift=shift,target_gross=gross,
-                            hold_days_by_request=holds)
+    from yieldcrest.campaign_analysis import analyze_campaign
+    return analyze_campaign(rid,face,shift,gross,probabilities,holds,tolerance,share)

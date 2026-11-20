@@ -92,6 +92,11 @@ def execute_tool(name,args,context):
             args=dict(args)
             args["probabilities"]={**merged.get("probabilities",{}),**args["probabilities"]}
     merged.update(args)
+    if name=="joint_allocation" and merged.get("target_request") is not None:
+        from yieldcrest.campaign_analysis import analyze_campaign
+        return analyze_campaign(merged["target_request"],merged["target_face"],merged.get("target_shift",0),
+            merged.get("target_gross"),merged.get("probabilities",{}),merged.get("hold_days_by_request",{}),
+            merged.get("partner_tolerance",0),merged.get("partner_share",.8))
     return allowed[name](**merged)
 
 
