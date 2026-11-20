@@ -59,7 +59,7 @@ def generate():
         db.execute("INSERT INTO faces VALUES(?,?,?,?,?,?,?)",
                    (i,name,zone,"Hoarding" if i%3 else "Bus shelter",200 if i%3 else 100,
                     1400+150*(i%5),100+15*(i%3)))
-    client_names = ["Partner Agency","Lotus Retail","Vista Cinemas","Metro Furnishings","Summit College",
+    client_names = ["Meridian Ads","Lotus Retail","Vista Cinemas","Metro Furnishings","Summit College",
                     "Garden Foods","City Mobility"] + [f"Advertiser {i:02}" for i in range(8,37)]
     for i,name in enumerate(client_names,1):
         db.execute("INSERT INTO clients VALUES(?,?,?,?)",
@@ -131,7 +131,7 @@ def generate():
         available=list(range(1,6))
     selected=available[:5]
     for i,(client,label,start,end,gross,kind) in enumerate([
-        (1,"Partner Agency · flexible retail campaign","2026-11-25","2026-12-09",65000,"Agency"),
+        (1,"Meridian Ads · flexible retail campaign","2026-11-25","2026-12-09",65000,"Agency"),
         (2,"Lotus · local storefront","2026-11-25","2026-12-09",43000,"Direct"),
         (3,"Vista · renewal request","2026-11-25","2026-12-09",46000,"Renewal")],1):
         eid=db.execute("INSERT INTO enquiries(client_id,face_id,received,requested_start,requested_end,status,record_source) VALUES(?,?,?,?,?,?,?)",

@@ -10,7 +10,7 @@ def render():
         policy=dict(db.execute("SELECT p.*,c.name FROM partner_policies p JOIN clients c ON c.id=p.client_id").fetchone())
         jobs=[dict(r) for r in db.execute("SELECT j.*,f.name FROM maintenance_jobs j JOIN faces f ON f.id=j.face_id")]
     st.write(f"**{policy['name']}** · {policy['priority']}")
-    st.caption("Editable demo terms. In the decisions view, contribution tolerance selects the best Partner Agency plan within that amount of the financial best plan.")
+    st.caption("Editable demo terms. In the decisions view, contribution tolerance selects the best Meridian Ads plan within that amount of the financial best plan.")
     st.table([{"AdPlay revenue share":f"{policy['share']:.0%}","Priority tolerance":money(policy["tolerance_rupees"])}])
     st.subheader("Choose a service window")
     selected=st.selectbox("Service job",[j["id"] for j in jobs],format_func=lambda i:next(j["name"]+" · "+j["task"] for j in jobs if j["id"]==i))

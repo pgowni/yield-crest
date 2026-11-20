@@ -126,8 +126,8 @@ def render():
             probabilities[str(r["id"])]=col.slider(f"{r['client']} close chance (%)",0,100,round(learned[str(r["id"])]*100),key=f"p_{r['id']}")/100
         a,b,c=st.columns(3)
         hold=a.slider("Hold until · days from today",0,5,3)
-        tolerance=b.number_input("Partner Agency priority tolerance (₹)",0,100000,5000,step=1000)
-        share=c.number_input("AdPlay share of Partner Agency bill (%)",1.,100.,80.,step=1.)/100
+        tolerance=b.number_input("Meridian Ads priority tolerance (₹)",0,100000,5000,step=1000)
+        share=c.number_input("AdPlay share of Meridian Ads bill (%)",1.,100.,80.,step=1.)/100
         st.caption("The 80% share and ₹5,000 priority tolerance are editable demo assumptions. Longer holds keep the displayed close chances fixed.")
         include=st.toggle("Schedule Ameerpet maintenance alongside these requests",value=False)
         maintenance={}
@@ -154,13 +154,13 @@ def render():
         st.caption(f"Middle 80% of simulated portfolio outcomes {money(recommended['p10']-service_cost)} to {money(recommended['p90']-service_cost)} · All five eligible faces included.")
         with st.expander("Competing plans and probability sensitivity"):
             st.dataframe([{"Plan":" / ".join(a["client"]+": "+(",".join(a["sites"]) or "Decline") for a in p["assignments"]),
-                           "Expected net":round(p["expected"]-service_cost),"Partner Agency included":p["partner"]} for p in joint["top_plans"]],hide_index=True,use_container_width=True)
-            if st.button("Sweep Partner Agency close probability"):
+                           "Expected net":round(p["expected"]-service_cost),"Meridian Ads included":p["partner"]} for p in joint["top_plans"]],hide_index=True,use_container_width=True)
+            if st.button("Sweep Meridian Ads close probability"):
                 sweep=[]
                 for probability in [0,.2,.4,.6,.8,1]:
                     ps=dict(probabilities);ps["1"]=probability
                     r=joint_result(hold,ps,tolerance,share,maintenance=maintenance,**settings)["recommended"]
-                    sweep.append({"Partner Agency chance":probability,"Expected net":r["expected"]-service_cost,
+                    sweep.append({"Meridian Ads chance":probability,"Expected net":r["expected"]-service_cost,
                                   "Allocation":" / ".join(a["client"]+": "+(",".join(a["sites"]) or "Decline") for a in r["assignments"])})
                 st.dataframe(sweep,hide_index=True,use_container_width=True)
                 st.caption("Other close probabilities stay fixed. Changes are bracketed at 20-percentage-point resolution.")
