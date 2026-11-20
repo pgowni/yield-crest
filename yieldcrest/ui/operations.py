@@ -15,36 +15,70 @@ def explain_assignments(result,job,window,baseline):
         requests={r["id"]:r for r in live_requests(db)}
         boards={r["id"]:f"YC-{r['id']:03d} · {r['name']} · {r['format']}" for r in db.execute("SELECT id,name,format FROM faces")}
         before={a["request_id"]:a for a in baseline["recommended"]["assignments"]}
+        st.subheader("How maintenance changes the booking plan")
+        st.caption(f"Maintenance scenario: {boards[job['face_id']]} · {job['task']} · {window['Start']} to {window['Finish']}.")
+        left,right=st.columns(2)
+        with left:
+            with st.container(border=True):
+                st.markdown("**Board stays available**")
+                st.write("This maintenance job is not scheduled. The board can take bookings, subject to existing commitments.")
+                st.metric("Expected contribution",money(baseline["recommended"]["expected"]),help="Contribution under the same hold and partner policy, with no block or expense for this maintenance job.")
+        with right:
+            with st.container(border=True):
+                st.markdown("**Board closed for maintenance**")
+                st.write(f"Only {boards[job['face_id']]} is blocked from {window['Start']} to {window['Finish']}. Bookings are allocated around that closure.")
+                st.metric("After maintenance expense",money(result["recommended"]["expected"]-job["service_cost"]),help="Contribution after blocking the selected board and deducting the direct maintenance expense.")
+        rows=[]
+        details=[]
         for assignment in result["recommended"]["assignments"]:
             rid=assignment["request_id"];request=requests[rid]
-            st.markdown(f"**{assignment['client']} · Request {rid}**")
-            st.write(f"{request['start_date']} to {request['end_date']} · Proposed price {money(request['gross'])} · Needs {request['quantity']} board(s).")
-            st.caption("Client-approved boards: "+"; ".join(boards[f] for f in request["faces"]))
-            st.write("Without this service block: "+(", ".join(before[rid]["sites"]) or "Not selected")+". With service: "+(", ".join(assignment["sites"]) or "Not selected")+".")
-            conflicts=[]
-            feasible=[]
+            old=before[rid]["sites"];new=assignment["sites"]
+            same=sorted(old)==sorted(new)
+            status=("Unchanged · same board" if new else "Unchanged · not selected") if same else ("No longer selected" if not new else "Now selected" if not old else "Moved to another board")
+            rows.append({"Client":assignment["client"],"Request":rid,
+                         "Campaign dates":request["start_date"]+" to "+request["end_date"],
+                         "Board stays available":", ".join(old) or "Not selected",
+                         "Board closed for maintenance":", ".join(new) or "Not selected",
+                         "Effect on allocation":status})
+            conflicts=[];feasible=[]
             for face in request["faces"]:
                 if not clear(request["start_date"],request["end_date"],existing_blocks(db,face)):
-                    conflicts.append(boards[face]+" overlaps an existing confirmed campaign")
+                    conflicts.append(boards[face]+" overlaps an existing confirmed campaign.")
                 elif face==job["face_id"] and overlaps(request["start_date"],request["end_date"],window["Start"],window["Finish"]):
-                    conflicts.append(boards[face]+f" is closed for service from {window['Start']} to {window['Finish']}")
-                else:
-                    feasible.append(face)
-            for conflict in conflicts:st.write("• "+conflict+".")
-            if not assignment["sites"]:
+                    conflicts.append(boards[face]+f" is closed for maintenance from {window['Start']} to {window['Finish']}.")
+                else:feasible.append(face)
+            if same:
+                reason=(f"The request remains on {', '.join(new)}. This maintenance window does not change its board allocation." if new else "This request is not selected in either scenario. Maintenance has not changed its selection outcome.")
+            else:
+                reason="The recommended allocation changes when the maintenance closure is added. The model reallocates the requests together under the same partner policy."
+            if not new:
                 if len(feasible)<request["quantity"]:
-                    st.write("There are not enough client-approved boards free for the entire campaign. Other locations or formats require client approval.")
+                    reason+=" There are not enough client-approved boards free for the full campaign."
                 else:
                     forced=result.get("best_including",{}).get(str(rid))
                     if forced:
                         loss=max(0,result["financial_best"]["expected"]-forced["expected"])
-                        st.write(f"The request fits physically, but the best plan including it has expected contribution {money(forced['expected'])} before service expense, {money(loss)} below the financially best plan. The recommendation also applies the partner-priority policy.")
-                    else:st.write("No feasible joint plan can include this request alongside the other constraints.")
-            else:
-                st.write("Selected as part of the recommended joint plan. Assignment remains conditional on the client closing.")
-            if before[rid]["sites"]==assignment["sites"]:
-                st.caption("This request's assignment did not change when maintenance was added. Its selection should not be attributed to maintenance.")
-            st.button("Review this enquiry",key=f"service_enquiry_{rid}",on_click=open_enquiry,args=(rid,))
+                        reason+=f" It fits physically, but the best plan including it is {money(loss)} below the financially best plan before maintenance expense. Partner priority also applies."
+                    else:reason+=" No feasible joint plan can include it under these constraints."
+            details.append((rid,assignment,request,status,reason,conflicts))
+        changed=sum(row["Effect on allocation"].startswith(("Moved","Now","No longer")) for row in rows)
+        if changed:
+            st.warning(f"{changed} of {len(rows)} request allocations change with this maintenance window.")
+        else:
+            st.success("No request allocations change. The same clients keep the same boards; maintenance can still affect future rental opportunities and adds its direct expense.")
+        st.dataframe(rows,hide_index=True,use_container_width=True)
+        st.caption("Not selected means excluded from the proposed plan, not automatically rejected. Assignments remain conditional on the client closing. No booking or maintenance job is confirmed here.")
+        st.markdown("**Request details**")
+        for rid,assignment,request,status,reason,conflicts in details:
+            with st.expander(f"{assignment['client']} · Request {rid} · {status}"):
+                st.write(reason)
+                st.table([{"Campaign dates":request["start_date"]+" to "+request["end_date"],
+                           "Proposed price":money(request["gross"]),"Boards required":request["quantity"]}])
+                st.caption("Client-approved boards: "+"; ".join(boards[f] for f in request["faces"]))
+                if conflicts:
+                    st.markdown("**Availability constraints**")
+                    for conflict in conflicts:st.write("• "+conflict)
+                st.button("Review this enquiry",key=f"service_enquiry_{rid}",on_click=open_enquiry,args=(rid,))
 
 
 def open_enquiry(request_id):
@@ -89,7 +123,6 @@ def render():
         comparison=joint_result(3,{},policy["tolerance_rupees"],policy["share"],True,False,.12,blocks)
         st.metric("Expected net after service expense",money(comparison["recommended"]["expected"]-job["service_cost"]), help='Expected portfolio contribution for this maintenance scenario after deducting the direct service cost.')
         baseline=joint_result(3,{},policy["tolerance_rupees"],policy["share"],True,False,.12,{})
-        st.write(f"Without service, expected portfolio contribution is {money(baseline['recommended']['expected'])}. With this service window, it is {money(comparison['recommended']['expected']-job['service_cost'])} after service expense. Both use the same hold and partner policy.")
         explain_assignments(comparison,job,chosen,baseline)
         st.caption("Scenario only. Choosing a window here does not confirm work or change stored bookings.")
 
