@@ -1,3 +1,4 @@
+from yieldcrest.ui.partner_badge import mark, dataframe, table
 from datetime import date
 
 import pandas as pd
@@ -50,50 +51,50 @@ def render():
         requests=live_requests(db)
         names={r["id"]:f"YC-{r['id']:03d} · {r['name']} · {r['format']}" for r in db.execute("SELECT id,name,format FROM faces")}
     st.subheader("Review a campaign and its competing opportunities")
-    rid=st.selectbox("Campaign",[r["id"] for r in requests],format_func=lambda i:next(r["label"] for r in requests if r["id"]==i),key="decision_request",on_change=reset_campaign_inputs)
+    rid=st.selectbox("Campaign",[r["id"] for r in requests],format_func=lambda i:mark(next(r["label"] for r in requests if r["id"]==i)),key="decision_request",on_change=reset_campaign_inputs)
     req=next(r for r in requests if r["id"]==rid)
     st.button("Reset campaign scenario",on_click=reset_campaign_inputs)
     revision=st.session_state.get("campaign_revision",0)
     price_key=f"campaign_price_v3_{rid}_{revision}"
     st.session_state.setdefault(price_key,int(req["gross"]))
     a,b,c=st.columns(3)
-    face=a.selectbox("Client-approved board",req["faces"],format_func=lambda f:names[f],key=f"face_{rid}")
+    face=a.selectbox("Client-approved board",req["faces"],format_func=lambda f:mark(names[f]),key=f"face_{rid}")
     gross=b.number_input("Proposed price (₹)",min_value=0,max_value=1000000,step=1000,key=price_key)
     shift=c.slider("Move campaign (days)",-5,10,0,key=f"shift_{rid}")
     try:
         firm=calendar_result(rid,face,shift,gross,**settings)
     except ValueError as error:
-        st.warning(str(error));return
+        st.warning(mark(str(error)));return
     scoped=[dict(r) for r in requests]
     target=next(r for r in scoped if r["id"]==rid)
     target.update({k:firm["request"][k] for k in ["start_date","end_date","gross"]});target["faces"]=[face]
     relevant=connected_requests(scoped,rid)
     ids={r["id"] for r in relevant}
-    st.markdown("### Requests affecting this decision")
-    st.caption(f"Selected campaign: {firm['request']['start_date']} to {firm['request']['end_date']} on {names[face]}. Only requests connected through overlapping dates and approved boards enter this comparison.")
+    st.markdown(mark("### Requests affecting this decision"))
+    st.caption(mark(f"Selected campaign: {firm['request']['start_date']} to {firm['request']['end_date']} on {names[face]}. Only requests connected through overlapping dates and approved boards enter this comparison."))
     probabilities={};holds={};rows=[]
     with connect() as db:
         for r in relevant:
             direct=r["id"]!=rid and face in r["faces"] and not (r["end_date"]<target["start_date"] or r["start_date"]>target["end_date"])
             reason="Selected campaign" if r["id"]==rid else "Direct competitor · same board and overlapping dates" if direct else "Connected competitor · shares an alternative board with another competing request"
             rows.append({"Client":r["client"],"Campaign dates":r["start_date"]+" to "+r["end_date"],"Why included":reason})
-        st.dataframe(rows,hide_index=True,use_container_width=True)
+        dataframe(rows,hide_index=True,use_container_width=True)
         for r in relevant:
             with st.container(border=True):
-                st.markdown(f"**{r['client']}** · "+("Selected campaign" if r["id"]==rid else "Competing request"))
+                st.markdown(mark(f"**{r['client']}** · "+("Selected campaign" if r["id"]==rid else "Competing request")))
                 left,right=st.columns(2)
                 learned=close_probability(db,r,r["faces"][0])
                 probabilities[str(r["id"])]=left.slider("Chance of confirmation (%)",0,100,round(learned*100),key=f"close_{rid}_{r['id']}_{revision}",help="Experimental model estimate; adjust using your knowledge of this client. Changing the deadline does not automatically change this probability.")/100
                 last=min(AS_OF+timedelta(days=5),date.fromisoformat(r["expires"]),date.fromisoformat(r["start_date"]))
                 deadline=right.date_input("Reserve until",value=min(AS_OF+timedelta(days=3),last),min_value=AS_OF,max_value=last,key=f"reserve_{rid}_{r['id']}_{revision}",help="If this request is selected, reserve its assigned board until this date. If it fails to confirm, the board is released for subsequent enquiries.")
                 holds[str(r["id"])]=(deadline-AS_OF).days
-                st.caption("Approved boards: "+"; ".join(names[f] for f in r["faces"]))
+                st.caption(mark("Approved boards: "+"; ".join(names[f] for f in r["faces"])))
     excluded=[r["client"] for r in requests if r["id"] not in ids]
-    if excluded:st.caption("Outside this comparison: "+", ".join(excluded)+" — no connected date-and-board conflict.")
-    with st.expander("Strategic partner policy"):
+    if excluded:st.caption(mark("Outside this comparison: "+", ".join(excluded)+" — no connected date-and-board conflict."))
+    with st.expander(mark("Strategic partner policy")):
         a,b=st.columns(2)
-        tolerance=a.number_input("Meridian Ads priority tolerance (₹)",0,100000,5000,step=1000)
-        share=b.number_input("AdPlay share of Meridian Ads bill (%)",1.,100.,80.,step=1.)/100
+        tolerance=a.number_input("Meridian Adsˢᴾ priority tolerance (₹)",0,100000,5000,step=1000)
+        share=b.number_input("AdPlay share of Meridian Adsˢᴾ bill (%)",1.,100.,80.,step=1.)/100
     with st.spinner("Comparing this campaign with connected requests and future demand…"):
         result=campaign_result(rid,face,shift,gross,probabilities,holds,tolerance,share)
     including=result["best_including"][str(rid)]
@@ -101,14 +102,14 @@ def render():
     recommended=result["recommended"]
     chosen=next(a for a in recommended["assignments"] if a["request_id"]==rid)
     st.subheader("Campaign decision")
-    if chosen["sites"]:st.success(f"Proposed plan includes {req['client']} on "+", ".join(chosen["sites"])+".")
-    else:st.info(f"Proposed plan leaves out {req['client']} and preserves its dates for competing requests or future business.")
-    st.markdown("**Maintenance included in this decision**")
+    if chosen["sites"]:st.success(mark(f"Proposed plan includes {req['client']} on "+", ".join(chosen["sites"])+"."))
+    else:st.info(mark(f"Proposed plan leaves out {req['client']} and preserves its dates for competing requests or future business."))
+    st.markdown(mark("**Maintenance included in this decision**"))
     schedule=recommended.get("maintenance_schedule",[])
     if schedule:
-        st.dataframe([{"Board":names[j["board_id"]],"Work":j["task"],"Closed from":j["start"],"Closed through":j["end"],"Expense":money(j["cost"])} for j in schedule],hide_index=True,use_container_width=True)
-        st.caption(result["maintenance_scope"])
-    else:st.caption("No pending maintenance job overlaps the boards and campaign windows in this comparison.")
+        dataframe([{"Board":names[j["board_id"]],"Work":j["task"],"Closed from":j["start"],"Closed through":j["end"],"Expense":money(j["cost"])} for j in schedule],hide_index=True,use_container_width=True)
+        st.caption(mark(result["maintenance_scope"]))
+    else:st.caption(mark("No pending maintenance job overlaps the boards and campaign windows in this comparison."))
     a,b,c=st.columns(3)
     a.metric("Proposed price",money(gross))
     b.metric("Expected advantage of including campaign",money(including["expected"]-excluding["expected"]) if including else "Cannot fit",help="Best expected contribution including this campaign minus the best excluding it. Includes connected competitors, confirmation chances, future demand and maintenance expense.")
@@ -120,13 +121,13 @@ def render():
     for label,plan in [("Include this campaign",including),("Leave this campaign out",excluding)]:
         if plan:
             comparisons.append({"Plan":label,"Expected contribution":money(plan["expected"]),"Lower simulated outcome":money(plan["p10"]),"Upper simulated outcome":money(plan["p90"])})
-    st.dataframe(comparisons,hide_index=True,use_container_width=True)
+    dataframe(comparisons,hide_index=True,use_container_width=True)
     if including and excluding:
-        st.caption(f"Including this campaign changes expected contribution by {money(including['expected']-excluding['expected'])}. Each row uses its financially best feasible allocation across the same boards; partner priority is applied to the recommended plan above.")
-    st.markdown("**Recommended board assignments**")
-    st.dataframe([{"Client":a["client"],"Board assignment":", ".join(a["sites"]) or "Not selected","Reserve until":result["hold_expiries"][str(a["request_id"]) ] if a["sites"] else "—"} for a in recommended["assignments"]],hide_index=True,use_container_width=True)
-    st.caption("These are proposed commitments, not confirmed bookings. Unselected requests are declined in this scenario; they are not assumed to wait for another request to fail.")
-    st.markdown("**Expected value of each request in the recommended allocation**")
+        st.caption(mark(f"Including this campaign changes expected contribution by {money(including['expected']-excluding['expected'])}. Each row uses its financially best feasible allocation across the same boards; partner priority is applied to the recommended plan above."))
+    st.markdown(mark("**Recommended board assignments**"))
+    dataframe([{"Client":a["client"],"Board assignment":", ".join(a["sites"]) or "Not selected","Reserve until":result["hold_expiries"][str(a["request_id"]) ] if a["sites"] else "—"} for a in recommended["assignments"]],hide_index=True,use_container_width=True)
+    st.caption(mark("These are proposed commitments, not confirmed bookings. Unselected requests are declined in this scenario; they are not assumed to wait for another request to fail."))
+    st.markdown(mark("**Expected value of each request in the recommended allocation**"))
     from yieldcrest.decision_engine import request_net
     with connect() as db:
         contribution_rows=[]
@@ -136,12 +137,12 @@ def render():
             assigned=[f for f in request["faces"] if names[f].split(" · ")[1] in item["sites"]]
             net=sum(request_net(db,request,f)/request["quantity"] for f in assigned)
             contribution_rows.append({"Client":request["client"],"Proposed price":money(request["gross"]),"Chance of confirmation":f"{probabilities[str(request['id'])]:.0%}","Net if confirmed":money(net) if assigned else "Not selected","Expected campaign contribution":money(net*probabilities[str(request['id'])])})
-    st.dataframe(contribution_rows,hide_index=True,use_container_width=True)
-    st.caption("Campaign contribution excludes future bookings and maintenance expense, which are included in the plan totals above. Unselected requests contribute zero to this plan.")
-    with st.expander("If this campaign were already confirmed"):
-        st.caption("This separate reference assumes 100% confirmation and compares with future demand only. The main comparison above includes current competitors and their individual close chances.")
+    dataframe(contribution_rows,hide_index=True,use_container_width=True)
+    st.caption(mark("Campaign contribution excludes future bookings and maintenance expense, which are included in the plan totals above. Unselected requests contribute zero to this plan."))
+    with st.expander(mark("If this campaign were already confirmed")):
+        st.caption(mark("This separate reference assumes 100% confirmation and compares with future demand only. The main comparison above includes current competitors and their individual close chances."))
         st.metric("Break-even proposed price · confirmed offer",money(firm["break_even_gross"]),help="Threshold against simulated future demand only. It does not include the opportunity cost of the other current requests.")
-        for paragraph in explain_calendar(firm):st.markdown(paragraph)
+        for paragraph in explain_calendar(firm):st.markdown(mark(paragraph))
     context={"calculation_workspace":"Decisions","settings":settings,"current_allocation":result,
              "selected_campaign":rid,"allocation_settings":{"target_request":rid,"target_face":face,"target_shift":shift,"target_gross":gross,"probabilities":probabilities,"hold_days_by_request":holds,"partner_tolerance":tolerance,"partner_share":share}}
     st.session_state.latest_context=context
