@@ -37,6 +37,7 @@ def integrated_service(job,hold,probabilities,tolerance,share,lit,cash,funding):
 
 def reset_campaign_inputs():
     """Discard scenario overrides when switching requests or explicitly resetting."""
+    st.session_state["campaign_revision"]=st.session_state.get("campaign_revision",0)+1
     for key in list(st.session_state):
         if key.startswith(("gross_", "shift_", "face_")):
             del st.session_state[key]
@@ -57,10 +58,15 @@ def render():
         rid=st.selectbox("Campaign", [r["id"] for r in requests],format_func=lambda i:next(r["label"] for r in requests if r["id"]==i),key="decision_request",on_change=reset_campaign_inputs)
         req=next(r for r in requests if r["id"]==rid)
         st.button("Reset campaign scenario",on_click=reset_campaign_inputs)
+        revision=st.session_state.get("campaign_revision",0)
+        price_key=f"campaign_price_v2_{rid}_{revision}"
+        if price_key not in st.session_state:
+            st.session_state[price_key]=int(req["gross"])
         a,b,c=st.columns([1,1,1])
         face=a.selectbox("Client-approved board",req["faces"],format_func=lambda i:names[i],key=f"face_{rid}")
         st.caption("Each option identifies an individual board and its physical format. A different board or format requires client approval; the current demo has one board per location.")
-        gross=b.number_input("Proposed price (₹)",0,1000000,int(req["gross"]),step=1000,key=f"gross_{rid}")
+        gross=b.number_input("Proposed price (₹)",min_value=0,max_value=1000000,step=1000,key=price_key)
+        b.caption(f"Recorded campaign price: {money(req["gross"])}. Edits here apply only to this scenario.")
         shift=c.slider("Move campaign (days)",-5,10,0,key=f"shift_{rid}")
         try:
             result=calendar_result(rid,face,shift,gross,**settings)
