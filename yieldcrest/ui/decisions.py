@@ -70,7 +70,7 @@ def render():
         st.warning(str(error));return
     scoped=[dict(r) for r in requests]
     target=next(r for r in scoped if r["id"]==rid)
-    target.update(firm["request"]);target["faces"]=[face]
+    target.update({k:firm["request"][k] for k in ["start_date","end_date","gross"]});target["faces"]=[face]
     relevant=connected_requests(scoped,rid)
     ids={r["id"] for r in relevant}
     st.markdown("### Requests affecting this decision")

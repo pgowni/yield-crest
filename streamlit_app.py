@@ -5,7 +5,7 @@ st.set_page_config(page_title="YieldCrest · Portfolio", layout="wide")
 from yieldcrest.ui import dashboard
 
 # Refresh imported modules once per deployed release, including existing sessions.
-_RELEASE = "campaign-workspace-2026-11-20-v5"
+_RELEASE = "campaign-workspace-2026-11-20-v6"
 if getattr(dashboard, "_loaded_release", None) != _RELEASE:
     from yieldcrest import decision_engine, assistant_chat, llm, campaign_analysis
     from yieldcrest.ui import decisions, operations, chat_panel
@@ -15,6 +15,8 @@ if getattr(dashboard, "_loaded_release", None) != _RELEASE:
     importlib.reload(assistant_chat)
     importlib.reload(llm)
     importlib.reload(decisions)
+    decisions.calendar_result.clear()
+    decisions.campaign_result.clear()
     decisions.joint_result.clear()
     decisions.integrated_service.clear()
     importlib.reload(operations)
