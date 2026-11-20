@@ -89,13 +89,23 @@ def render():
         for r in relevant:
             with st.container(border=True):
                 st.markdown(mark(f"**{r['client']}** · "+("Selected campaign" if r["id"]==rid else "Competing request")))
+                booking_start=date.fromisoformat(r["start_date"])
+                booking_end=date.fromisoformat(r["end_date"])
+                start_col,end_col,price_col,count_col=st.columns(4)
+                start_col.markdown(f"**Booking starts**\n\n{booking_start:%d %b %Y}")
+                end_col.markdown(f"**Booking ends**\n\n{booking_end:%d %b %Y}")
+                price_col.markdown(f"**Proposed price**\n\n{money(r['gross'])}")
+                count_col.markdown(f"**Boards required**\n\n{r['quantity']}")
+                st.caption(f"Request {r['id']} · {r['kind']} · {(booking_end-booking_start).days+1} display days")
                 left,right=st.columns(2)
                 learned=close_probability(db,r,r["faces"][0])
                 probabilities[str(r["id"])]=left.slider("Chance of confirmation (%)",0,100,round(learned*100),key=f"close_{rid}_{r['id']}_{revision}",help="Experimental model estimate; adjust using your knowledge of this client. Changing the deadline does not automatically change this probability.")/100
                 last=min(AS_OF+timedelta(days=5),date.fromisoformat(r["expires"]),date.fromisoformat(r["start_date"]))
                 deadline=right.date_input("Reserve until",value=min(AS_OF+timedelta(days=3),last),min_value=AS_OF,max_value=last,key=f"reserve_{rid}_{r['id']}_{revision}",help="If this request is selected, reserve its assigned board until this date. If it fails to confirm, the board is released for subsequent enquiries.")
                 holds[str(r["id"])]=(deadline-AS_OF).days
-                st.caption(mark("Approved boards: "+"; ".join(names[f] for f in r["faces"])))
+                with st.expander(f"Approved boards ({len(r['faces'])})"):
+                    for approved_face in r["faces"]:
+                        st.write(names[approved_face])
     excluded=[r["client"] for r in requests if r["id"] not in ids]
     if excluded:st.caption(mark("Outside this comparison: "+", ".join(excluded)+" — no connected date-and-board conflict."))
     with st.expander(mark("Strategic partner policy")):
