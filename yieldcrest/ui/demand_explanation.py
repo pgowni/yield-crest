@@ -25,19 +25,20 @@ def render(face,start,end,mode="accept"):
         rows.append({"Factor":"Festive daily rates","What the model sees":f"About {abs(ratio-1):.0%} {direction} for a booking of this length",
                      "What it means":"Based on accepted demo deals. A better-paying booking may not arrive."})
     dataframe(rows,hide_index=True,use_container_width=True)
-    st.markdown("#### What to watch")
+    st.markdown("**Evidence supporting this outlook**")
+    evidence=[]
+    for label,group,count,weight in [
+        ("This board","This board",d['evidence']['local_bookings'],d['local_weight']),
+        ("Entire portfolio · includes this board","Portfolio",d['evidence']['pooled_bookings'],1-d['local_weight'])]:
+        festive=next((r['Accepted bookings'] for r in d['history'] if r['Group']==group and r['Campaign period']=='Festive overlap'),0)
+        evidence.append({"History source":label,"Accepted bookings":count,"Festive bookings":festive,
+                         "Other bookings":count-festive,"Sampling weight":f"{weight:.0%}"})
+    dataframe(evidence,hide_index=True,use_container_width=True)
+    st.caption("Sampling weight shows how often the model draws from the board-specific history versus the portfolio pool. The portfolio includes this board, so the counts are not added together. Bookings can share seasonal conditions; more records alone do not establish forecast confidence. All records are synthetic, and pricing evidence covers accepted offers only.")
+    st.markdown("**What this means for the decision**")
     if mode in ['future','maintenance']:
         st.markdown("- **Future business:** The chosen plan depends partly on new enquiries arriving and fitting the open dates.\n- **Risk:** The board could remain unsold. Keep marketing it while respecting maintenance dates.")
     elif mode=='competitor':
         st.markdown("- **Current alternative:** Another client gets the overlapping dates, subject to confirmation.\n- **Future business:** Forecast demand applies to dates still available.")
     else:
         st.markdown("- **Current opportunity:** The recommended plan takes this request while considering future demand.\n- **Remaining dates:** New enquiries can still fill the dates left open.")
-    with st.expander('History behind the forecast'):
-        st.write(f"There are {d['evidence']['local_bookings']} accepted bookings for this board and {d['evidence']['pooled_bookings']} across all boards. About {d['local_weight']:.0%} of the booking examples used come from this board; the rest come from the wider business.")
-        rows=[]
-        for r in d['history']:
-            rows.append({'History':r['Group'],'Dates':r['Campaign period'],'Bookings':r['Accepted bookings'],
-                         'Average daily rent':f"₹{r['Average achieved daily rent']:,.0f}" if r['Average achieved daily rent'] is not None else 'No records',
-                         'Average booking length (days)':round(r['Average campaign days'],1) if r['Average campaign days'] is not None else 'No records'})
-        dataframe(rows,hide_index=True,use_container_width=True)
-        st.caption('These are made-up demo records. Prices come from accepted offers only. Several bookings can share the same seasonal conditions, so they are not separate proof that the forecast is accurate.')
